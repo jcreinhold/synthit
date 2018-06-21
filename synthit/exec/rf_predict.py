@@ -25,7 +25,7 @@ with warnings.catch_warnings():
 
 
 def arg_parser():
-    parser = argparse.ArgumentParser(description='synthesize a set of MR images via RF regression')
+    parser = argparse.ArgumentParser(description='synthesize MR images via patch-based RF regression')
 
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True,

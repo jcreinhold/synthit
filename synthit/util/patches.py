@@ -43,7 +43,7 @@ def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radi
         raise SynthError('Data must be 3-dimensional.')
     context = True if ctx_radius[0] > 0 else False
     if economy_patch:
-        patch_len = 6 + len(ctx_radius) * 6 if context else 6
+        patch_len = 7 + len(ctx_radius) * 6 if context else 7
     else:
         patch_len = patch_size**3+(len(ctx_radius) * 6) if context else patch_size**3
     patches = np.zeros((len(idxs[0]), patch_len))
@@ -57,7 +57,7 @@ def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radi
 
 def get_patch(data, i, j, k, h, economy_size=True):
     """
-    get an indiviudal patch based on the data and the indices and (half) patch size
+    get an individual patch based on the data and the indices and (half) patch size
 
     option to get an 'economy-sized' patch, which extracts the seemingly most important
     Args:
@@ -72,7 +72,8 @@ def get_patch(data, i, j, k, h, economy_size=True):
         patch (np.ndarray): patch from data centered at i,j,k
     """
     if economy_size:
-        patch = patch_context(data, i, j, k, 1)  # use patch_context for convenience
+        # use patch_context for convenience, since it grabs desired elements
+        patch = np.concatenate((np.array([data[i,j,k]]), patch_context(data, i, j, k, 1)))
     else:
         patch = data[i-h:i+h+1,j-h:j+h+1,k-h:k+h+1]
     return patch

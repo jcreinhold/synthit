@@ -24,7 +24,7 @@ with warnings.catch_warnings():
 
 
 def arg_parser():
-    parser = argparse.ArgumentParser(description='train a RF regressor for MR image synthesis')
+    parser = argparse.ArgumentParser(description='train a patch-based RF regressor for MR image synthesis')
 
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True,
@@ -40,20 +40,29 @@ def arg_parser():
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
 
-    adv_options = parser.add_argument_group('Advanced Options')
-    adv_options.add_argument('-n', '--n-jobs', type=int, default=-1,
-                             help='number of processors to use (-1 is all processors) '
-                                  '[Default=-1]')
-    adv_options.add_argument('--ctx-radius', type=int, default=(3,5), nargs='+',
-                             help='context radii to use when extracting patches [Default=(3,5)]')
-    adv_options.add_argument('--min-leaf', type=int, default=5,
-                             help='minimum number of leaves (see min_samples_leaf) [Default=5]')
-    adv_options.add_argument('--n-trees', type=int, default=60,
-                             help='number of trees in rf (see n_estimators) [Default=60]')
-    adv_options.add_argument('--max-features', default=(1.0/3.0),
-                             help='proportion of features to use in rf (see max_features) [Default=1/3]')
-    adv_options.add_argument('--random-seed', default=0,
-                             help='set random seed of the rf for reproducibility [Default=0]')
+    synth_options = parser.add_argument_group('Synthesis Options')
+    synth_options.add_argument('--patch-size', type=int, default=3,
+                               help='patch size extracted for regression [Default=3]')
+    synth_options.add_argument('--full-patch', action='store_true', default=False,
+                               help='use the full patch in regression vs a reduced size patch [Default=True]')
+    synth_options.add_argument('--stride', type=int, default=1,
+                               help='use every `stride` voxel in regressor [Default=1]')
+    synth_options.add_argument('--ctx-radius', type=int, default=(3,5), nargs='+',
+                               help='context radii to use when extracting patches [Default=(3,5)]')
+    synth_options.add_argument('--threshold', type=int, default=0,
+                               help='threshold for foreground and background (above is foreground) [Default=0]')
+
+    regr_options = parser.add_argument_group('Regressor Options')
+    regr_options.add_argument('-n', '--n-jobs', type=int, default=-1,
+                              help='number of processors to use (-1 is all processors) [Default=-1]')
+    regr_options.add_argument('--min-leaf', type=int, default=5,
+                              help='minimum number of leaves (see min_samples_leaf) [Default=5]')
+    regr_options.add_argument('--n-trees', type=int, default=60,
+                              help='number of trees in rf (see n_estimators) [Default=60]')
+    regr_options.add_argument('--max-features', default=(1.0/3.0),
+                              help='proportion of features to use in rf (see max_features) [Default=1/3]')
+    regr_options.add_argument('--random-seed', default=0,
+                              help='set random seed of the rf for reproducibility [Default=0]')
     return parser
 
 
@@ -68,11 +77,11 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        rf = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf,
-                                   n_estimators=args.n_trees, max_features=args.max_features,
-                                   random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
-        logger.debug(rf)
-        ps = PatchSynth(rf, context_radius=args.ctx_radius, flatten=True)
+        regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf,
+                                     n_estimators=args.n_trees, max_features=args.max_features,
+                                     random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
+        logger.debug(regr)
+        ps = PatchSynth(regr, args.patch_size, args.stride, args.ctx_radius, args.threshold, flatten=True)
         source = ps.image_list(args.source_dir)
         target = ps.image_list(args.target_dir)
         if args.mask_dir is not None:
