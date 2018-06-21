@@ -17,10 +17,7 @@ import mock
 import os
 import sys
 
-MOCK_MODULES = ['ants','matplotlib','nibabel','numpy','sklearn.mixture','skfuzzy','sklearn'
-                'scipy','statsmodels','matplotlib.pyplot','scipy.ndimage','scipy.ndimage.morphology',
-                'scipy.linalg','skfuzzy.fuzzymath','rpy2','rpy2.robjects.packages','sklearn.cluster',
-                'statsmodels.api','scipy.signal','seaborn']
+MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 

@@ -39,14 +39,13 @@ args = dict(
     license=license,
     packages=find_packages(exclude=('tests', 'docs')),
     entry_points = {
-        'console_scripts': ['directory-view=synthit.exec.directory_view:main',]
+        'console_scripts': ['directory-view=synthit.exec.directory_view:main',
+                            'rf-train=synthit.exec.rf_train:main',]
     },
     keywords="mr image synthesis",
     dependency_links=[antspy]
 )
 
 setup(install_requires=['antspy',
-                        'matplotlib',
                         'numpy',
-                        'scikit-learn',
-                        'scipy'], **args)
+                        'scikit-learn'], **args)

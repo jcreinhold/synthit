@@ -1,6 +1,13 @@
 Executables
 ===================================
 
+Random Forest Synthesis Trainer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. argparse::
+   :module: synthit.exec.rf_train
+   :func: arg_parser
+   :prog: rf-train
+
 Directory Viewer
 ~~~~~~~~~~~~~~~~~~~~~
 

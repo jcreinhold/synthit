@@ -16,7 +16,6 @@ Requirements
 - antspy
 - numpy
 - scikit-learn
-- scipy
 
 Basic Usage
 -----------

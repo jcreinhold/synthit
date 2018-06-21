@@ -10,5 +10,5 @@ Input/Output Functions
 Patch Extraction
 ~~~~~~~~~~~~~~~~
 
-.. automodule:: synthit.util.io
+.. automodule:: synthit.util.patches
    :members:

@@ -25,7 +25,7 @@ class TestUtilities(unittest.TestCase):
         self.data_dir = os.path.join(wd, 'test_data', 'images')
         self.mask_dir = os.path.join(wd, 'test_data', 'masks')
         self.img_fn = os.path.join(self.data_dir, 'test.nii.gz')
-        self.mask_fn = os.path.join(self.data_dir, 'mask.nii.gz')
+        self.mask_fn = os.path.join(self.mask_dir, 'mask.nii.gz')
         self.img = ants.image_read(self.img_fn)
         self.mask = ants.image_read(self.mask_fn)
 

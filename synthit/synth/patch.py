@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-synthit.synth.base
+synthit.synth.patch
 
-base class for synthesizers
+base class for patch-based synthesis routines
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
 Created on: Jun 20, 2018
 """
 
-__all__ = ['Synth']
+__all__ = ['PatchSynth']
 
 import logging
 
@@ -24,14 +24,29 @@ from ..util.patches import extract_patches
 logger = logging.getLogger(__name__)
 
 
-class Synth():
+class PatchSynth():
 
-    def __init__(self, patch_size=3, stride=1, context_radius=7, min_val=0, n_jobs=-1):
+    def __init__(self, regr, patch_size=3, stride=1, context_radius=7, min_val=0, flatten=True):
         self.patch_size = patch_size
         self.stride = stride
         self.context_radius = context_radius
         self.min_val = min_val
-        self.n_jobs = n_jobs
+        self.flatten = flatten
+        self.regr = regr
+
+    def fit(self, source, target):
+        logger.info('Training the RF')
+        X, y = self.extract_patches_train(source, target)
+        self.regr.fit(X, y.flatten() if self.flatten else y)
+
+    def predict(self, source):
+        logger.info('Starting synthesis')
+        X, idxs = self.extract_patches_predict(source)
+        y = self.regr.predict(X)
+        synthesized = source.numpy()
+        synthesized[idxs] = y.flatten()
+        predicted = source.new_image_like(synthesized)
+        return predicted
 
     def extract_patches_train(self, source, target):
         all_patches = []
