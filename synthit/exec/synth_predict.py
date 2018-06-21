@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-synthit.exec.rf_predict
+synthit.exec.synth_predict
 
-command line interface to synthesize images with a trained random forest
+command line interface to synthesize images with a patch-based trained regressor
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
@@ -25,7 +25,7 @@ with warnings.catch_warnings():
 
 
 def arg_parser():
-    parser = argparse.ArgumentParser(description='synthesize MR images via patch-based RF regression')
+    parser = argparse.ArgumentParser(description='synthesize MR images via patch-based regression')
 
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True,
@@ -63,8 +63,9 @@ def main():
         for i, (img_fn, mask_fn) in enumerate(zip(img_fns, mask_fns), 1):
             dirpath, base, _ = split_filename(img_fn)
             logger.info('Synthesizing image from: {} ({:d}/{:d})'.format(base, i, len(img_fns)))
-            img = ants.image_read(img_fn) if mask_fn is None else ants.image_read(img_fn) * ants.image_read(mask_fn)
-            synth = ps.predict(img)
+            mask = None if mask_fn is None else ants.image_read(mask_fn)
+            img = ants.image_read(img_fn) if mask is None else ants.image_read(img_fn) * mask
+            synth = ps.predict(img, mask)
             out_fn = os.path.join(dirpath if args.output_dir is None else args.output_dir, base + '_syn.nii.gz')
             logger.debug('Saving image: {}'.format(out_fn))
             synth.to_filename(out_fn)

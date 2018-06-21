@@ -16,6 +16,7 @@ Requirements
 - antspy
 - numpy
 - scikit-learn
+- xgboost
 
 Basic Usage
 -----------

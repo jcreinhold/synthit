@@ -39,7 +39,7 @@ class PatchSynth():
         flatten (bool): flatten the target voxel intensities (needed in some types of regressors)
     """
 
-    def __init__(self, regr, patch_size=3, stride=1, context_radius=(3,5), threshold=0, flatten=True):
+    def __init__(self, regr, patch_size=3, stride=1, context_radius=(3,5,7), threshold=0, flatten=True):
         self.patch_size = patch_size
         self.stride = stride
         self.context_radius = context_radius
@@ -47,16 +47,16 @@ class PatchSynth():
         self.flatten = flatten
         self.regr = regr
 
-    def fit(self, source, target):
+    def fit(self, source, target, mask=None):
         """ train the model for synthesis given a set of source and target images """
-        X, y = self.extract_patches_train(source, target)
+        X, y = self.extract_patches_train(source, target, mask)
         logger.info('Training the model')
         self.regr.fit(X, y.flatten() if self.flatten else y)
 
-    def predict(self, source):
+    def predict(self, source, mask=None):
         """ synthesize/predict an image from a source (input) image """
         logger.info('Extracting patches')
-        X, idxs = self.extract_patches_predict(source)
+        X, idxs = self.extract_patches_predict(source, mask)
         logger.info('Starting synthesis')
         y = self.regr.predict(X)
         synthesized = source.numpy()
@@ -64,18 +64,19 @@ class PatchSynth():
         predicted = source.new_image_like(synthesized)
         return predicted
 
-    def extract_patches_train(self, source, target):
+    def extract_patches_train(self, source, target, mask=None):
         """ get patches and corresponding target voxel intensity values for training """
         all_patches = []
         all_out = []
         if len(source) != len(target):
             raise SynthError('Number of source and target images must be the same in training!')
-        for i, (src, tgt) in enumerate(zip(source, target), 1):
+        mask = [None] * len(source) if mask is None else mask
+        for i, (src, tgt, msk) in enumerate(zip(source, target, mask), 1):
             logger.info('Extracting patches ({:d}/{:d})'.format(i, len(source)))
             src_data = src.numpy()
             tgt_data = tgt.numpy()
-            idxs = np.where(src_data > self.threshold)
-            idxs = [idxs[::self.stride] for idxs in idxs]
+            idxs = np.where(src_data > self.threshold) if msk is None else np.where(msk.numpy() == 1)
+            idxs = [idx[::self.stride] for idx in idxs]
             patches = extract_patches(src_data, idxs, patch_size=self.patch_size, ctx_radius=self.context_radius)
             out = tgt_data[idxs][:,np.newaxis]
             all_patches.append(patches)
@@ -84,10 +85,10 @@ class PatchSynth():
         all_out = np.vstack(all_out)
         return all_patches, all_out
 
-    def extract_patches_predict(self, source):
+    def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """
         src_data = source.numpy()
-        idxs = np.where(src_data > self.threshold)
+        idxs = np.where(src_data > self.threshold) if mask is None else np.where(mask.numpy() == 1)
         patches = extract_patches(src_data, idxs, patch_size=self.patch_size, ctx_radius=self.context_radius)
         return patches, idxs
 
