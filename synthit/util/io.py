@@ -18,6 +18,7 @@ import os
 
 
 def split_filename(filepath):
+    """ split a filepath into the directory, base, and extension """
     path = os.path.dirname(filepath)
     filename = os.path.basename(filepath)
     base, ext = os.path.splitext(filename)
@@ -28,5 +29,6 @@ def split_filename(filepath):
 
 
 def glob_nii(path):
+    """ grab all nifti files in a directory and sort them for consistency """
     fns = sorted(glob(os.path.join(path, '*.nii*')))
     return fns

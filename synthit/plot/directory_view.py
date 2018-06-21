@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-directory_view
+synthit.plot.directory_view
 
 create profile view images of all images in a directory
 
@@ -23,7 +23,7 @@ from ..util.io import glob_nii, split_filename
 logger = logging.getLogger(__name__)
 
 
-def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png'):
+def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True):
     """
     create images for a directory of nifti files
 
@@ -33,19 +33,29 @@ def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png'):
         labels (str): path to directory of corresponding labels (not needed)
         figsize (float): size of output image
         outtype (str): type of file to output (e.g., png, pdf, etc.)
+        ortho (bool): plot ortho view vs slices
 
     Returns:
         None
     """
     img_fns = glob_nii(dir)
-    if labels is not None:
-        labels_fns = glob_nii(labels)
-        if len(img_fns) != len(labels_fns):
+    if labels is None:
+        label_fns = [None] * len(img_fns)
+    else:
+        label_fns = glob_nii(labels)
+        if len(img_fns) != len(label_fns):
             raise SynthError('Number of images and labels must be equal')
     if out_dir is None:
         out_dir, _, _ = split_filename(img_fns[0])
-    for img_fn in img_fns:
-        img = ants.image_read(img_fn)
+    for i, (img_fn, label_fn) in enumerate(zip(img_fns, label_fns), 1):
         _, base, _ = split_filename(img_fn)
+        logger.info('Creating view for image: {} ({:d}/{:d})'.format(base, i, len(img_fns)))
+        img = ants.image_read(img_fn)
+        label = None if label_fn is None else ants.image_read(label_fn)
         out_fn = os.path.join(out_dir, base + '.' + outtype)
-        ants.plot(img, figsize=figsize, filename=out_fn)
+        if ortho:
+            ants.plot_ortho(img, overlay=label, overlay_cmap='prism', overlay_alpha=0.3,
+                            flat=True, figsize=figsize, orient_labels=False, xyz_lines=False,
+                            filename=out_fn)
+        else:
+            ants.plot(img, figsize=figsize, filename=out_fn)

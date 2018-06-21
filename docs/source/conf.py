@@ -17,12 +17,12 @@ import mock
 import os
 import sys
 
-MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble']
+MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble', 'sklearn.externals']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
 # this should not be needed with the above, but meh
-autodoc_mock_imports = ['ants','matplotlib','nibabel','numpy','skfuzzy','sklearn','scipy','statsmodels','rpy2','seaborn']
+autodoc_mock_imports = ['ants','numpy','sklearn']
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 

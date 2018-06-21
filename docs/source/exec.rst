@@ -8,6 +8,13 @@ Random Forest Synthesis Trainer
    :func: arg_parser
    :prog: rf-train
 
+Random Forest Synthesis Predictor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. argparse::
+   :module: synthit.exec.rf_predict
+   :func: arg_parser
+   :prog: rf-predict
+
 Directory Viewer
 ~~~~~~~~~~~~~~~~~~~~~
 

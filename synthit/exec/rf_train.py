@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-synthit.exec.directory_view
+synthit.exec.rf_train
 
-command line interface to create profile images for a directory of nifti files
+command line interface to train a synthesis random forest regressor
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
@@ -12,11 +12,11 @@ Created on: Jun 20, 2018
 
 import argparse
 import logging
-import pickle
 import sys
 import warnings
 
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.externals import joblib
 
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
@@ -24,7 +24,7 @@ with warnings.catch_warnings():
 
 
 def arg_parser():
-    parser = argparse.ArgumentParser(description='train a rf synthesis')
+    parser = argparse.ArgumentParser(description='train a RF regressor for MR image synthesis')
 
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True,
@@ -44,12 +44,16 @@ def arg_parser():
     adv_options.add_argument('-n', '--n-jobs', type=int, default=-1,
                              help='number of processors to use (-1 is all processors) '
                                   '[Default=-1]')
+    adv_options.add_argument('--ctx-radius', type=int, default=(3,5), nargs='+',
+                             help='context radii to use when extracting patches [Default=(3,5)]')
     adv_options.add_argument('--min-leaf', type=int, default=5,
                              help='minimum number of leaves (see min_samples_leaf) [Default=5]')
     adv_options.add_argument('--n-trees', type=int, default=60,
                              help='number of trees in rf (see n_estimators) [Default=60]')
     adv_options.add_argument('--max-features', default=(1.0/3.0),
                              help='proportion of features to use in rf (see max_features) [Default=1/3]')
+    adv_options.add_argument('--random-seed', default=0,
+                             help='set random seed of the rf for reproducibility [Default=0]')
     return parser
 
 
@@ -65,8 +69,10 @@ def main():
     logger = logging.getLogger(__name__)
     try:
         rf = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf,
-                                   n_estimators=args.n_trees, max_features=args.max_features)
-        ps = PatchSynth(rf, flatten=True)
+                                   n_estimators=args.n_trees, max_features=args.max_features,
+                                   random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
+        logger.debug(rf)
+        ps = PatchSynth(rf, context_radius=args.ctx_radius, flatten=True)
         source = ps.image_list(args.source_dir)
         target = ps.image_list(args.target_dir)
         if args.mask_dir is not None:
@@ -75,8 +81,8 @@ def main():
             target = [tgt * mask for (tgt, mask) in zip(target, masks)]
         ps.fit(source, target)
         outfile = 'trained_rf.pkl' if args.output is None else args.output
-        with open(outfile, 'wb') as f:
-            pickle.dump(ps, f)
+        logger.info('Saving trained model: {}'.format(outfile))
+        joblib.dump(ps, outfile)
         return 0
     except Exception as e:
         logger.exception(e)

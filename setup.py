@@ -40,7 +40,8 @@ args = dict(
     packages=find_packages(exclude=('tests', 'docs')),
     entry_points = {
         'console_scripts': ['directory-view=synthit.exec.directory_view:main',
-                            'rf-train=synthit.exec.rf_train:main',]
+                            'rf-train=synthit.exec.rf_train:main',
+                            'rf-predict=synthit.exec.rf_predict:main',]
     },
     keywords="mr image synthesis",
     dependency_links=[antspy]
