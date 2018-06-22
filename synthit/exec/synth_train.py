@@ -62,6 +62,8 @@ def arg_parser():
                               help='number of trees in rf or xg (see n_estimators) [Default=60]')
     regr_options.add_argument('--max-features', default=(1.0/3.0),
                               help='proportion of features to use in rf (see max_features) [Default=1/3]')
+    regr_options.add_argument('--max-depth', type=int, default=None,
+                              help='maximum tree depth in rf or xg [Default=None (3 for xg)]')
     regr_options.add_argument('--random-seed', default=0,
                               help='set random seed for reproducibility [Default=0]')
     return parser
@@ -80,12 +82,13 @@ def main():
     try:
         if args.regr_type == 'rf':
             from sklearn.ensemble import RandomForestRegressor
-            regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf,
-                                         n_estimators=args.n_trees, max_features=args.max_features,
+            regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf, n_estimators=args.n_trees,
+                                         max_features=args.max_features, max_depth=args.max_depth,
                                          random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
         elif args.regr_type == 'xg':
             from xgboost import XGBRegressor
             regr = XGBRegressor(n_jobs=args.n_jobs, n_estimators=args.n_trees, random_state=args.random_seed,
+                                max_depth=3 if args.max_depth is None else args.max_depth,
                                 silent=False if args.verbosity >=2 else True)
         else:
             raise SynthError('Invalid regressor type: {}. rf, xg are the only supported options.'.format(args.regr_type))
@@ -93,14 +96,18 @@ def main():
         ps = PatchSynth(regr, args.patch_size, args.stride, args.ctx_radius, args.threshold, flatten=True)
         source = ps.image_list(args.source_dir)
         target = ps.image_list(args.target_dir)
+        if len(source) != len(target):
+            raise SynthError('Number of source and target images must be equal.')
         if args.mask_dir is not None:
             masks = ps.image_list(args.mask_dir)
+            if len(masks) != len(source):
+                raise SynthError('If masks are provided, the number of masks must be equal to the number of images.')
             source = [src * mask for (src, mask) in zip(source, masks)]
             target = [tgt * mask for (tgt, mask) in zip(target, masks)]
         else:
             masks = [None] * len(source)
         ps.fit(source, target, masks)
-        outfile = 'trained_rf.pkl' if args.output is None else args.output
+        outfile = 'trained_model.pkl' if args.output is None else args.output
         logger.info('Saving trained model: {}'.format(outfile))
         joblib.dump(ps, outfile)
         return 0

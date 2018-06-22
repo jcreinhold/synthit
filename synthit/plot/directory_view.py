@@ -23,7 +23,7 @@ from ..util.io import glob_nii, split_filename
 logger = logging.getLogger(__name__)
 
 
-def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True):
+def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True, trim=True):
     """
     create images for a directory of nifti files
 
@@ -34,6 +34,7 @@ def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ort
         figsize (float): size of output image
         outtype (str): type of file to output (e.g., png, pdf, etc.)
         ortho (bool): plot ortho view vs slices
+        trim (bool): trim blank/white space from image (need to have imagemagick installed)
 
     Returns:
         None
@@ -59,3 +60,12 @@ def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ort
                             filename=out_fn)
         else:
             ants.plot(img, figsize=figsize, filename=out_fn)
+    if trim:
+        logger.info('trimming blank space from all views')
+        from subprocess import call
+        try:
+            call(['mogrify', '-trim', os.path.join(out_dir,'*.'+outtype)])
+        except OSError as e:
+            logger.warning('need to have imagemagick installed if trim option on')
+            logger.error(e)
+

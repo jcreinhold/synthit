@@ -67,7 +67,7 @@ def main():
             img = ants.image_read(img_fn) if mask is None else ants.image_read(img_fn) * mask
             synth = ps.predict(img, mask)
             out_fn = os.path.join(dirpath if args.output_dir is None else args.output_dir, base + '_syn.nii.gz')
-            logger.debug('Saving image: {}'.format(out_fn))
+            logger.info('Saving image: {}'.format(out_fn))
             synth.to_filename(out_fn)
         return 0
     except Exception as e:

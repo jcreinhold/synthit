@@ -60,7 +60,10 @@ class PatchSynth():
         logger.info('Starting synthesis')
         y = self.regr.predict(X)
         synthesized = source.numpy()
-        synthesized[idxs] = y.flatten()
+        msk = np.zeros(source.numpy().shape, dtype=bool)
+        msk[idxs] = True
+        synthesized[msk] = y.flatten()
+        synthesized[~msk] = np.min(y)-1
         predicted = source.new_image_like(synthesized)
         return predicted
 

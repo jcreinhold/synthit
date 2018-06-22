@@ -39,6 +39,8 @@ def arg_parser():
                          help='type of output image to save (e.g., png, pdf, etc.)')
     options.add_argument('--slices', action='store_true', default=False,
                          help='plot slices instead of ortho view')
+    options.add_argument('--trim', action='store_true', default=False,
+                         help='trim output image of blank/white space outside the plot')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
     return parser
@@ -55,7 +57,8 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        directory_view(args.img_dir, args.output_dir, args.label_dir, args.figsize, args.output_type, not args.slices)
+        directory_view(args.img_dir, args.output_dir, args.label_dir, args.figsize,
+                       args.output_type, not args.slices, args.trim)
         return 0
     except Exception as e:
         logger.exception(e)
