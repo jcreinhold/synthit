@@ -14,8 +14,10 @@ Requirements
 ------------
 
 - antspy
+- matplotlib
 - numpy
 - scikit-learn
+- scikit-image
 - xgboost
 
 Basic Usage

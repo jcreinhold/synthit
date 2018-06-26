@@ -17,7 +17,10 @@ import mock
 import os
 import sys
 
-MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble', 'sklearn.externals', 'xgboost']
+MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble','sklearn.externals','sklearn.preprocessing',
+                'xgboost','matplotlib','matplotlib.pyplot','scipy','scipy.spatial','scipy.ndimage',
+                'seaborn','skimage','skimage.measure']
+
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 

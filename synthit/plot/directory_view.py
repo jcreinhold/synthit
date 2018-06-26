@@ -23,12 +23,12 @@ from ..util.io import glob_nii, split_filename
 logger = logging.getLogger(__name__)
 
 
-def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True, trim=True):
+def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True, trim=True):
     """
     create images for a directory of nifti files
 
     Args:
-        dir (str): path to directory
+        img_dir (str): path to directory
         out_dir (str): path to save directory
         labels (str): path to directory of corresponding labels (not needed)
         figsize (float): size of output image
@@ -39,7 +39,7 @@ def directory_view(dir, out_dir=None, labels=None, figsize=3, outtype='png', ort
     Returns:
         None
     """
-    img_fns = glob_nii(dir)
+    img_fns = glob_nii(img_dir)
     if labels is None:
         label_fns = [None] * len(img_fns)
     else:

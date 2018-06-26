@@ -15,6 +15,7 @@ import logging
 import sys
 import warnings
 
+import numpy as np
 from sklearn.externals import joblib
 
 with warnings.catch_warnings():
@@ -36,7 +37,7 @@ def arg_parser():
                          help='path to output the trained regressor')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
-    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg'),
+    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr'),
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
@@ -46,12 +47,16 @@ def arg_parser():
                                help='patch size extracted for regression [Default=3]')
     synth_options.add_argument('--full-patch', action='store_true', default=False,
                                help='use the full patch in regression vs a reduced size patch [Default=True]')
-    synth_options.add_argument('--stride', type=int, default=1,
-                               help='use every `stride` voxel in regressor [Default=1]')
+    synth_options.add_argument('--n-samples', type=float, default=None,
+                               help='use randomly sampled (with replacement) `n_samples` voxels for training '
+                                    'regressor (None uses all voxels) [Default=None]')
     synth_options.add_argument('--ctx-radius', type=int, default=(3,5,7), nargs='+',
                                help='context radii to use when extracting patches [Default=(3,5,7)]')
     synth_options.add_argument('--threshold', type=int, default=0,
                                help='threshold for foreground and background (above is foreground) [Default=0]')
+    synth_options.add_argument('--poly-deg', type=int, default=None,
+                               help='degree of polynomial features derived from extracted patches '
+                                    '(None means do not use polynomial features) [Default=None]')
 
     regr_options = parser.add_argument_group('Regressor Options')
     regr_options.add_argument('-n', '--n-jobs', type=int, default=-1,
@@ -80,20 +85,27 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
+        np.random.seed(args.random_seed)
         if args.regr_type == 'rf':
             from sklearn.ensemble import RandomForestRegressor
             regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf, n_estimators=args.n_trees,
                                          max_features=args.max_features, max_depth=args.max_depth,
                                          random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
+            flatten = True
         elif args.regr_type == 'xg':
             from xgboost import XGBRegressor
             regr = XGBRegressor(n_jobs=args.n_jobs, n_estimators=args.n_trees, random_state=args.random_seed,
                                 max_depth=3 if args.max_depth is None else args.max_depth,
                                 silent=False if args.verbosity >=2 else True)
+            flatten = True
+        elif args.regr_type == 'pr':
+            from sklearn.linear_model import LinearRegression
+            regr = LinearRegression(n_jobs=args.n_jobs)
+            flatten = False
         else:
             raise SynthError('Invalid regressor type: {}. rf, xg are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
-        ps = PatchSynth(regr, args.patch_size, args.stride, args.ctx_radius, args.threshold, flatten=True)
+        ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg, flatten)
         source = ps.image_list(args.source_dir)
         target = ps.image_list(args.target_dir)
         if len(source) != len(target):

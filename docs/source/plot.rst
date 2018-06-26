@@ -1,6 +1,12 @@
 Plot
 ===================================
 
+Synthesis Quality
+~~~~~~~~~~~~~~~~~
+
+.. automodule:: synthit.plot.synth_quality
+   :members:
+
 Directory View
 ~~~~~~~~~~~~~~
 

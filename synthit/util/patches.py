@@ -18,7 +18,7 @@ import numpy as np
 from ..errors import SynthError
 
 
-def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radius=(3,5), economy_patch=True):
+def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radius=(3,5,7), economy_patch=True):
     """
     extract patches (with or without context) from a 3D image
 
@@ -41,11 +41,11 @@ def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radi
         raise SynthError('Patch size must be odd')
     if len(idxs) != 3:
         raise SynthError('Data must be 3-dimensional.')
-    context = True if ctx_radius[0] > 0 else False
+    ctx_radius = ctx_radius if ctx_radius[0] > 0 else []
     if economy_patch:
-        patch_len = 7 + len(ctx_radius) * 6 if context else 7
+        patch_len = 7 + len(ctx_radius) * 6
     else:
-        patch_len = patch_size**3+(len(ctx_radius) * 6) if context else patch_size**3
+        patch_len = patch_size**3+(len(ctx_radius) * 6)
     patches = np.zeros((len(idxs[0]), patch_len))
     h = int(np.floor(patch_size / 2))
     for n, (i, j, k) in enumerate(zip(*idxs)):

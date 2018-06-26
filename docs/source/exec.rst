@@ -3,6 +3,7 @@ Executables
 
 Synthesis Trainer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. argparse::
    :module: synthit.exec.synth_train
    :func: arg_parser
@@ -10,10 +11,19 @@ Synthesis Trainer
 
 Synthesis Predictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. argparse::
    :module: synthit.exec.synth_predict
    :func: arg_parser
    :prog: synth-predict
+
+Synthesis Quality
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. argparse::
+   :module: synthit.exec.synth_quality
+   :func: arg_parser
+   :prog: synth-quality
 
 Directory Viewer
 ~~~~~~~~~~~~~~~~~~~~~

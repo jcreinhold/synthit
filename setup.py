@@ -26,7 +26,7 @@ if platform == "linux" or platform == "linux32":
 elif platform == "darwin":
     antspy = "https://github.com/ANTsX/ANTsPy/releases/download/Weekly/antspy-0.1.4-cp36-cp36m-macosx_10_7_x86_64.whl"
 else:
-    raise Exception('intensity-normalization package only supports linux and OS X')
+    raise Exception('synthit package only supports linux and OS X')
 
 args = dict(
     name='synthit',
@@ -40,6 +40,7 @@ args = dict(
     packages=find_packages(exclude=('tests', 'docs')),
     entry_points = {
         'console_scripts': ['directory-view=synthit.exec.directory_view:main',
+                            'synth-quality=synthit.exec.synth_quality:main',
                             'synth-train=synthit.exec.synth_train:main',
                             'synth-predict=synthit.exec.synth_predict:main',]
     },
@@ -48,6 +49,9 @@ args = dict(
 )
 
 setup(install_requires=['antspy',
+                        'matplotlib',
                         'numpy',
                         'scikit-learn',
+                        'scikit-image',
+                        'scipy',
                         'xgboost'], **args)
