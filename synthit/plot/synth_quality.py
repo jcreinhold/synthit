@@ -85,10 +85,7 @@ def plot_synth_quality(synth, truth, mask):
     Returns:
         ax (matplotlib ax object): ax that the plot was created on
     """
-    stats, metrics = synth_quality(synth, truth, mask)
-    stats = [np.abs(s) for s in stats]
-    metrics = [m if m != 'MattesMutualInformation' else 'MI' for m in metrics]
-    metrics = [m if m != 'Correlation' else 'GC' for m in metrics]  # that is, "global correlation"
+    stats, metrics = synth_quality(synth.numpy(), truth.numpy(), mask.numpy())
     ax = __radar_plot(metrics, stats)
     area = quality_simplex(stats)
     ax.set_title('Synthesis Quality Simplex')
