@@ -19,16 +19,16 @@ import os
 import ants
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial import ConvexHull
 
 from ..errors import SynthError
 from ..util.io import glob_nii, split_filename
-from ..util.quality import synth_quality
+from ..util.quality import synth_quality, quality_simplex
 
 logger = logging.getLogger(__name__)
 
 try:
     import seaborn as sns
+    sns.set(style='whitegrid', font_scale=2, rc={'grid.color': '.9'})
 except ImportError:
     logger.info('Seaborn not installed, so plots will not be as pretty. :-(')
 
@@ -90,13 +90,10 @@ def plot_synth_quality(synth, truth, mask):
     metrics = [m if m != 'MattesMutualInformation' else 'MI' for m in metrics]
     metrics = [m if m != 'Correlation' else 'GC' for m in metrics]  # that is, "global correlation"
     ax = __radar_plot(metrics, stats)
-    stats_simplex = np.array([np.zeros(2) for _ in range(len(stats))])
-    angles = np.linspace(0, 2 * np.pi, len(stats), endpoint=False)
-    for i, (s, a) in enumerate(zip(stats, angles)):
-        stats_simplex[i, :] = __pol2cart(s, a)
-    area = ConvexHull(stats_simplex).volume  # volume in 2d is area
+    area = quality_simplex(stats)
     ax.set_title('Synthesis Quality Simplex')
-    ax.text(0.9, 0.1, 'Simplex Area: {:0.2f}'.format(area), transform=ax.transAxes)
+    ax.text(0.1, -0.1, 'Normalized\nSimplex Area: {:0.2f}'.format(area),
+            transform=ax.transAxes, horizontalalignment='center')
     return ax
 
 
@@ -110,17 +107,11 @@ def __radar_plot(labels, stats):
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False)
     stats = np.concatenate((stats, [stats[0]]))
     angles = np.concatenate((angles, [angles[0]]))
-    fig = plt.figure()
+    fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(111, polar=True)
     ax.plot(angles, stats, 'o-', linewidth=2)
     ax.fill(angles, stats, alpha=0.25)
+    ax.grid(True)
     ax.set_thetagrids(angles * 180 / np.pi, labels)
     ax.set_rmax(1)
-    ax.grid(True)
     return ax
-
-
-def __pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return (x, y)
