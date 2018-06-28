@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-synthit.util.io
+synthit.util.quality
 
 measure synthesis image quality for the synthit package
 
@@ -11,7 +11,7 @@ Created on: Jun 26, 2018
 """
 
 __all__ = ['synth_quality',
-           'quality_simplex',
+           'quality_simplex_area',
            'normalized_cross_correlation',
            'normalized_mutual_info',
            'mutual_info',
@@ -58,7 +58,7 @@ def synth_quality(synth, truth, mask=None):
     return stats, metrics
 
 
-def quality_simplex(stats):
+def quality_simplex_area(stats):
     """
     area of the "quality simplex," i.e., the area of the simplex defined in 2d by
     radially plotting the values of metrics mutual information, correlation, and ssim

@@ -22,7 +22,7 @@ import numpy as np
 
 from ..errors import SynthError
 from ..util.io import glob_nii, split_filename
-from ..util.quality import synth_quality, quality_simplex
+from ..util.quality import synth_quality, quality_simplex_area
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def plot_synth_quality(synth, truth, mask):
     """
     stats, metrics = synth_quality(synth.numpy(), truth.numpy(), mask.numpy())
     ax = __radar_plot(metrics, stats)
-    area = quality_simplex(stats)
+    area = quality_simplex_area(stats)
     ax.set_title('Synthesis Quality Simplex')
     ax.text(0.1, -0.1, 'Normalized\nSimplex Area: {:0.2f}'.format(area),
             transform=ax.transAxes, horizontalalignment='center')

@@ -18,7 +18,7 @@ import numpy as np
 from ..errors import SynthError
 
 
-def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radius=(3,5,7), economy_patch=True):
+def extract_patches(data, idxs=None, patch_size=3, min_val=0, ctx_radius=(3,5,7), economy_patch=True):
     """
     extract patches (with or without context) from a 3D image
 
@@ -26,7 +26,6 @@ def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radi
         data (np.ndarray): 3d data
         idxs (tuple): tuple of np.ndarrays corresponding to indices (e.g., output from np.where)
         patch_size (int): patch size (this cubed), must be odd
-        stride (int): use only (1/stide) of the indices
         min_val (float): minimum value of extracted indices if idxs not provided
         ctx_radius (tuple): tuple of positive integers greater than patch size ((0) if no context desired)
         economy_patch (bool): return 'economy-sized' patches (not full patches, just the patch
@@ -36,7 +35,6 @@ def extract_patches(data, idxs=None, patch_size=3, stride=1, min_val=0, ctx_radi
     """
     if idxs is None:
         idxs = np.where(data > min_val)
-        idxs = [idx[::stride] for idx in idxs]
     if patch_size % 2 != 1:
         raise SynthError('Patch size must be odd')
     if len(idxs) != 3:
