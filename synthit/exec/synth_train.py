@@ -46,7 +46,7 @@ def arg_parser():
     synth_options.add_argument('--patch-size', type=int, default=3,
                                help='patch size extracted for regression [Default=3]')
     synth_options.add_argument('--full-patch', action='store_true', default=False,
-                               help='use the full patch in regression vs a reduced size patch [Default=True]')
+                               help='use the full patch in regression vs a reduced size patch [Default=False]')
     synth_options.add_argument('--n-samples', type=float, default=None,
                                help='use randomly sampled (with replacement) `n_samples` voxels for training '
                                     'regressor (None uses all voxels) [Default=None]')

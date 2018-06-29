@@ -82,8 +82,8 @@ class PatchSynth():
         """ get patches and corresponding target voxel intensity values for training """
         all_patches = []
         all_out = []
-        if len(source) != len(target):
-            raise SynthError('Number of source and target images must be the same in training!')
+        if len(source) != len(target) or len(source) == 0:
+            raise SynthError('Number of source and target images must be the same in training and non-zero!')
         mask = [None] * len(source) if mask is None else mask
         for i, (src, tgt, msk) in enumerate(zip(source, target, mask), 1):
             logger.info('Extracting patches ({:d}/{:d})'.format(i, len(source)))
