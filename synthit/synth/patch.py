@@ -38,16 +38,21 @@ class PatchSynth():
             get context values at 3 voxels and 5 voxels away from the patch center)
         threshold (float): threshold that separated background and foreground (foreground greater than threshold)
         poly_deg (int): degree of polynomial features to generate from patch samples
+        mean (bool): use the mean of the patch instead of the patch values
+        full_patch (bool): use a full patch instead of the 6-nearest neighbors
         flatten (bool): flatten the target voxel intensities (needed in some types of regressors)
     """
 
-    def __init__(self, regr, patch_size=3, n_samples=1e5, context_radius=(3,5,7), threshold=0, poly_deg=None, flatten=True):
+    def __init__(self, regr, patch_size=3, n_samples=1e5, context_radius=(3,5,7), threshold=0, poly_deg=None,
+                 mean=False, full_patch=False, flatten=True):
         self.patch_size = patch_size
         self.n_samples = n_samples
         self.context_radius = context_radius
         self.threshold = threshold
-        self.flatten = flatten
         self.poly_deg = poly_deg
+        self.mean = mean
+        self.economy_patch = not full_patch
+        self.flatten = flatten
         self.regr = regr
 
     def fit(self, source, target, mask=None):
@@ -96,8 +101,8 @@ class PatchSynth():
                                    .format(self.n_samples, idxs[0].size))
                 choices = np.random.choice(np.arange(idxs[0].size), int(self.n_samples), replace=True)
                 idxs = tuple([idx[choices] for idx in idxs])
-            patches = extract_patches(src_data, idxs, patch_size=self.patch_size, ctx_radius=self.context_radius)
-            out = tgt_data[idxs][:,np.newaxis]
+            patches = self.__extract_patches(src_data, idxs)
+            out = tgt_data[idxs][:, np.newaxis] if not self.mean else self.__extract_patches(tgt_data, idxs)
             all_patches.append(patches)
             all_out.append(out)
         all_patches = np.vstack(all_patches)
@@ -108,8 +113,14 @@ class PatchSynth():
         """ extract patches and get indices for prediction/synthesis """
         src_data = source.numpy()
         idxs = np.where(src_data > self.threshold) if mask is None else np.where(mask.numpy() == 1)
-        patches = extract_patches(src_data, idxs, patch_size=self.patch_size, ctx_radius=self.context_radius)
+        patches = self.__extract_patches(src_data, idxs)
         return patches, idxs
+
+    def __extract_patches(self, data, idxs):
+        """ convenience wrapper for extract patches specific to this instantiation """
+        patches = extract_patches(data, idxs, self.patch_size, self.threshold, self.context_radius,
+                                  self.economy_patch, self.mean)
+        return patches
 
     @staticmethod
     def image_list(img_dir):

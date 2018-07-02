@@ -18,7 +18,7 @@ import numpy as np
 from ..errors import SynthError
 
 
-def extract_patches(data, idxs=None, patch_size=3, min_val=0, ctx_radius=(3,5,7), economy_patch=True):
+def extract_patches(data, idxs=None, patch_size=3, min_val=0, ctx_radius=(3,5,7), economy_patch=True, mean=False):
     """
     extract patches (with or without context) from a 3D image
 
@@ -34,7 +34,9 @@ def extract_patches(data, idxs=None, patch_size=3, min_val=0, ctx_radius=(3,5,7)
         patch_size (int): patch size (this cubed), must be odd
         min_val (float): minimum value of extracted indices if idxs not provided
         ctx_radius (tuple): tuple of positive integers greater than patch size ((0) if no context desired)
-        economy_patch (bool): return 'economy-sized' patches (not full patches, just the patch
+        economy_patch (bool): return 'economy-sized' patches (not full patches, just the center and
+            the 6-nearest neighbor voxels)
+        mean (bool): return mean value of patches
 
     Returns:
         patches (np.ndarray): array of patches
@@ -72,6 +74,8 @@ def extract_patches(data, idxs=None, patch_size=3, min_val=0, ctx_radius=(3,5,7)
             patch = get_patch(data, i, j, k, h, economy_patch).flatten()
             ctx = [patch_context(data, i, j, k, r) for r in ctx_radius]
             patches[n, :] = np.concatenate((patch, *ctx))
+    if mean:
+        patches = np.mean(patches, axis=1)[:, np.newaxis]
     return patches
 
 

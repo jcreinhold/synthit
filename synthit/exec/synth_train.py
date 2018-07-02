@@ -57,6 +57,8 @@ def arg_parser():
     synth_options.add_argument('--poly-deg', type=int, default=None,
                                help='degree of polynomial features derived from extracted patches '
                                     '(None means do not use polynomial features) [Default=None]')
+    synth_options.add_argument('--mean', action='store_true', default=False,
+                               help='learn to take the mean value of input patch to the mean value of output patches')
 
     regr_options = parser.add_argument_group('Regressor Options')
     regr_options.add_argument('-n', '--n-jobs', type=int, default=-1,
@@ -103,9 +105,10 @@ def main():
             regr = LinearRegression(n_jobs=args.n_jobs)
             flatten = False
         else:
-            raise SynthError('Invalid regressor type: {}. rf, xg are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. rf, xg, and pr are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
-        ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg, flatten)
+        ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
+                        args.mean, args.full_patch, flatten)
         source = ps.image_list(args.source_dir)
         target = ps.image_list(args.target_dir)
         if len(source) != len(target):
