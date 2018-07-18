@@ -37,7 +37,7 @@ def arg_parser():
                          help='path to output the trained regressor')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
-    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr'),
+    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr'),
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
@@ -102,7 +102,11 @@ def main():
             flatten = True
         elif args.regr_type == 'pr':
             from sklearn.linear_model import LinearRegression
-            regr = LinearRegression(n_jobs=args.n_jobs)
+            regr = LinearRegression(n_jobs=args.n_jobs, fit_intercept=True if args.poly_deg is None else False)
+            flatten = False
+        elif args.regr_type == 'mlr':
+            from ..util.mlr import LinearRegressionMixture
+            regr = LinearRegressionMixture(3)
             flatten = False
         else:
             raise SynthError('Invalid regressor type: {}. rf, xg, and pr are the only supported options.'.format(args.regr_type))
