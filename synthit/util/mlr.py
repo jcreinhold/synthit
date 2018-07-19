@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class LinearRegressionMixture:
     """ Mixture of linear regressors model """
 
-    def __init__(self, num_components, max_iterations=20, threshold=1e-5, num_restarts=3, num_workers=1, k=5):
+    def __init__(self, num_components, max_iterations=20, threshold=1e-5, num_restarts=1, num_workers=1, k=5):
         self.num_components = num_components
         self.max_iterations = max_iterations
         self.threshold = threshold
@@ -53,13 +53,13 @@ class LinearRegressionMixture:
         self.coefficients = results.best.coefficients
         self.variances = results.best.variances
         neigh = KNeighborsClassifier(self.k)
-        self.classifier = neigh.fit(X, results.assignments)
+        self.classifier = neigh.fit(X, results.best.assignments)
 
     def predict(self, X):
         assignments = self.classifier.predict(X)
         y = np.zeros(X.shape[0])
         for i in range(self.num_components):
-            y[assignments == i] = X[assignments == i] * self.coefficients[i]
+            y[assignments == i] = X[assignments == i] @ self.coefficients[i]
         return y
 
 
@@ -104,8 +104,8 @@ def weighted_linear_regression(X, y, weights):
     Returns:
 
     """
-    w = weights[:, np.newaxis]
-    wlr = np.linalg.pinv((w * X).T.dot(X)).dot((w * X).T.dot(y))
+    W = weights[:, np.newaxis]
+    wlr = np.linalg.pinv((W * X).T.dot(X)).dot((W * X).T.dot(y))
     return wlr
 
 
@@ -167,6 +167,7 @@ def calculate_assignment_weights(X, y, component_weights, coefficients, variance
     # Initialize the new assignment weights
     assignment_weights = np.ones((len(X), num_components), dtype=float)  # N x J
 
+    # TODO: speed this up
     # Calculate the likelihood of the points one at a time
     # to prevent underflow issues
     for xi, yi in zip(X, y):
@@ -226,11 +227,13 @@ def maximum_likelihood_parameters(X, y, num_components, assignments, assignment_
             points = np.random.choice(len(assignments), size=np.random.randint(1, len(assignments)), replace=False)
             weights = np.ones(len(points)) / float(len(points))
 
+        Xi, yi = X[points], y[points]
+
         # Get the weighted least squares coefficients
-        coefficients[i] = weighted_linear_regression(X, y, weights)
+        coefficients[i] = weighted_linear_regression(Xi, yi, weights)
 
         # Get the variance of the component given the coefficients
-        variances[i] = weighted_regression_variance(X, y, weights, coefficients[i])
+        variances[i] = weighted_regression_variance(Xi, yi, weights, coefficients[i])
 
     return (component_weights, coefficients, variances)
 
@@ -251,10 +254,17 @@ def data_log_likelihood(X, y, assignments, component_weights, coefficients, vari
     Returns:
 
     """
-    mu = X.dot(coefficients[assignments])
-    sigma = np.sqrt(variances[assignments])
 
-    log_likelihood = np.log(norm.pdf(y, loc=mu, scale=sigma)).sum() + np.log(component_weights[assignments])
+    log_likelihood = 0
+    # TODO: speed this up
+    for i in range(X.shape[0]):
+        assigned = assignments[i]
+
+        mu = X[i].dot(coefficients[assigned])
+        sigma = np.sqrt(variances[assigned])
+
+        log_likelihood += norm.logpdf(y, loc=mu, scale=sigma).sum()
+        log_likelihood += np.log(component_weights[assigned])
 
     return log_likelihood
 
@@ -275,8 +285,6 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
     Returns:
 
     """
-    num_features = X.shape[1]  # M
-
     # Initialize the results
     results = MixtureResults(num_components)
 
@@ -284,9 +292,13 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
     cur_log_likelihood = 0
     cur_iteration = 0
 
+    logger.info('Randomly initializing assignment weights')
+
     # Random initialization
     assignment_weights = np.random.uniform(size=(X.shape[0], num_components))  # N x J
     assignment_weights /= assignment_weights.sum(axis=1)[:, np.newaxis]  # (N x J) / (N x 1)
+
+    logger.info('Sampling assignments')
 
     # Initialize using the normal steps now
     assignments = calculate_assignments(assignment_weights, stochastic=True)  # N x 1
@@ -295,6 +307,7 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
                                                                                assignments, assignment_weights)
 
     while np.abs(prev_log_likelihood - cur_log_likelihood) > threshold and cur_iteration < max_iterations:
+        logger.info('Starting iteration #{0}'.format(cur_iteration))
 
         # Calculate the expectation weights
         assignment_weights = calculate_assignment_weights(X, y, component_weights, coefficients, variances)  # N x J
@@ -309,6 +322,8 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
         # Calculate the total data log-likelihood
         prev_log_likelihood = cur_log_likelihood
         cur_log_likelihood = data_log_likelihood(X, y, assignments, component_weights, coefficients, variances)
+
+        logger.info('Log-Likelihood: {0}'.format(cur_log_likelihood))
 
         # Add the iteration to the results
         results.add_iteration(assignments, component_weights, coefficients, variances, cur_log_likelihood)
@@ -364,3 +379,67 @@ def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stocha
         pool.terminate()
 
     return max_result
+
+
+def __test():
+    import matplotlib.pyplot as plt
+    print('Testing mixture of 3 linear regression models with known number of components')
+
+    NUM_COMPONENTS = 3
+    NUM_POINTS = 3000
+    TRUE_COEFFICIENTS = np.array([[2, 0.2], [1, 0.4], [0.8, -0.1]])
+    TRUE_VARIANCES = np.array([0.1, 0.2, 0.1])**2
+    TRUE_COMPONENT_WEIGHTS = np.array([0.4, 0.2, 0.4])
+    TRUE_ASSIGNMENTS = np.random.choice(NUM_COMPONENTS, p=TRUE_COMPONENT_WEIGHTS, size=NUM_POINTS)
+
+    # Generate some random points
+    X = np.random.uniform(size=(NUM_POINTS, TRUE_COEFFICIENTS.shape[1]))
+    X[:,0] = 1
+    y = np.zeros((NUM_POINTS))
+
+    for i in range(NUM_COMPONENTS):
+        # Get the parameters of this subset's component
+        coefficients = TRUE_COEFFICIENTS[i]
+        variance = TRUE_VARIANCES[i]
+
+        # Get class labels
+        assignments = TRUE_ASSIGNMENTS == i
+
+        # Generate a noisy version of the response variables
+        y[assignments] = X[assignments].dot(coefficients) + np.random.normal(0, np.sqrt(variance), size=len(X[assignments]))
+
+    results = fit_with_restarts(X, y, 3, 20, 8, stochastic=False, num_workers=4)
+
+    # Plot the data
+    COMPONENT_COLORS = ['red', 'blue', 'green', 'yellow', 'orange', 'brown', 'gray']
+    for i in range(NUM_COMPONENTS):
+        assignments = TRUE_ASSIGNMENTS == i
+        Xi = X[assignments]
+        yi = y[assignments]
+
+        # Draw the data points
+        plt.scatter(Xi[:,1], yi, color=COMPONENT_COLORS[i])
+
+    # Plot the true lines
+    for i,coefficients in enumerate(TRUE_COEFFICIENTS):
+        x = np.linspace(0, 1, 6)
+        features = np.ones((6, 2))
+        features[:,1] = x
+        y = features.dot(coefficients)
+        plt.plot(x, y, color='gray', linestyle='--')
+
+    # Plot the resulting lines
+    for i, coefficients in enumerate(results.best.coefficients):
+        x = np.linspace(0, 1, 6)
+        features = np.ones((6, 2))
+        features[:,1] = x
+        y = features.dot(coefficients)
+
+        plt.plot(x, y, color='black')
+
+    plt.xlim(0,1)
+    plt.show()
+
+
+if __name__ == '__main__':
+    __test()

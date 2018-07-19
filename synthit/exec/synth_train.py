@@ -71,6 +71,8 @@ def arg_parser():
                               help='proportion of features to use in rf (see max_features) [Default=1/3]')
     regr_options.add_argument('--max-depth', type=int, default=None,
                               help='maximum tree depth in rf or xg [Default=None (3 for xg)]')
+    regr_options.add_argument('--num-restarts', type=int, default=1,
+                              help='number of restarts for mlr (since finds local optimum) [Default=1]')
     regr_options.add_argument('--random-seed', default=0,
                               help='set random seed for reproducibility [Default=0]')
     return parser
@@ -106,9 +108,9 @@ def main():
             flatten = False
         elif args.regr_type == 'mlr':
             from ..util.mlr import LinearRegressionMixture
-            regr = LinearRegressionMixture(3)
+            regr = LinearRegressionMixture(3, num_restarts=args.num_restarts)
             args.poly_deg = 1 if args.poly_deg is None else args.poly_deg  # hack to get bias term included in features
-            flatten = False
+            flatten = True
         else:
             raise SynthError('Invalid regressor type: {}. rf, xg, pr, and mlr are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
