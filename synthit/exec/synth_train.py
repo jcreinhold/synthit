@@ -107,9 +107,10 @@ def main():
         elif args.regr_type == 'mlr':
             from ..util.mlr import LinearRegressionMixture
             regr = LinearRegressionMixture(3)
+            args.poly_deg = 1 if args.poly_deg is None else args.poly_deg  # hack to get bias term included in features
             flatten = False
         else:
-            raise SynthError('Invalid regressor type: {}. rf, xg, and pr are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. rf, xg, pr, and mlr are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
                         args.mean, args.full_patch, flatten)

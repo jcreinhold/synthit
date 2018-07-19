@@ -4,7 +4,15 @@
 synthit.util.mlr
 
 holds code to fit and predict from a mixture of
-linear regressors
+linear regressors.
+
+Note that this code is largely based off of [1]
+(read: copied and modified) which is designed around [2]
+
+References:
+    [1] W. Tansey, https://github.com/tansey/regression_mixtures
+    [2] S. Faria and G. Soromenho, “Fitting mixtures of linear regressions,”
+        J. Stat. Comput. Simul., vol. 80, no. 2, pp. 201–225, 2010.
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
@@ -14,76 +22,159 @@ Created on: Jul 18, 2018
 __all__ = ['LinearRegressionMixture']
 
 import logging
+from multiprocessing import Pool
 
 import numpy as np
 from scipy.stats import norm
+from sklearn.neighbors import KNeighborsClassifier
 
 logger = logging.getLogger(__name__)
 
 
 class LinearRegressionMixture:
+    """ Mixture of linear regressors model """
 
-    def __init__(self, K):
-        self.K = K
+    def __init__(self, num_components, max_iterations=20, threshold=1e-5, num_restarts=3, num_workers=1, k=5):
+        self.num_components = num_components
+        self.max_iterations = max_iterations
+        self.threshold = threshold
+        self.num_restarts = num_restarts
+        self.num_workers = num_workers
+        self.k = k
 
     def fit(self, X, y):
-        pass
+        if self.num_restarts > 1:
+            results = fit_with_restarts(X, y, self.num_components, self.max_iterations, self.num_restarts, False, self.num_workers)
+        else:
+            results = fit_mixture(X, y, self.num_components, self.max_iterations, False, self.threshold)
+        #del results.iterations  # delete this since it is large
+        self.results = results
+        self.component_weights = results.best.component_weights
+        self.coefficients = results.best.coefficients
+        self.variances = results.best.variances
+        neigh = KNeighborsClassifier(self.k)
+        self.classifier = neigh.fit(X, results.assignments)
 
     def predict(self, X):
-        pass
+        assignments = self.classifier.predict(X)
+        y = np.zeros(X.shape[0])
+        for i in range(self.num_components):
+            y[assignments == i] = X[assignments == i] * self.coefficients[i]
+        return y
 
-    def __em(self, X, y):
-        pass
+
+class MixtureModel:
+    """Container to store the results of a single iteration of the CEM algorithm."""
+    def __init__(self, assignments, component_weights, coefficients, variances):
+        self.assignments = assignments
+        self.component_weights = component_weights
+        self.coefficients = coefficients
+        self.variances = variances
 
 
-def weighted_linear_regression(x, y, weights):
+class MixtureResults:
+    """Container to store the results of a CEM iteration."""
+    def __init__(self, num_components):
+        self.num_components = num_components
+        self.iterations = []
+        self.log_likelihoods = []
+        self.best = None
+
+    def add_iteration(self, assignments, component_weights, coefficients, variances, data_log_likelihood):
+        self.iterations.append(MixtureModel(assignments, component_weights, coefficients, variances))
+        self.log_likelihoods.append(data_log_likelihood)
+
+    def finish(self):
+        """Tell the container we're done running CEM."""
+        self.log_likelihoods = np.array(self.log_likelihoods)
+        self.best = self.iterations[np.argmax(self.log_likelihoods)]
+
+
+def weighted_linear_regression(X, y, weights):
     """
     Perform linear regression and return the residuals. Note this assumes
     the weights are a vector rather than the standard diagonal matrix-- this is
     for computational efficiency.
+
+    Args:
+        X (np.ndarray): source data (N x M matrix)
+        y (np.ndarray): target data (N x 1 matrix)
+        weights:
+
+    Returns:
+
     """
-    return np.linalg.pinv((weights[:, np.newaxis] * x).T.dot(x)).dot((weights[:, np.newaxis] * x).T.dot(y))
+    w = weights[:, np.newaxis]
+    wlr = np.linalg.pinv((w * X).T.dot(X)).dot((w * X).T.dot(y))
+    return wlr
 
 
-def weighted_regression_variance(x, y, weights, coefficients):
-    """Calculate the variance of a regression model where each observation is weighted."""
-    # TODO: Vectorize
-    result = 0.
-    for i in range(len(y)):
-        result += weights[i] * (y[i] - x[i].T.dot(coefficients)) ** 2
-    return result / weights.sum()
+def weighted_regression_variance(X, y, weights, coefficients):
+    """
+    Calculate the variance of a regression model where each observation is weighted.
+
+    Args:
+        X (np.ndarray): source data (N x M matrix)
+        y (np.ndarray): target data (N x 1 matrix)
+        weights (np.ndarray): posterior probability
+        coefficients: coefficients for mean, i.e., beta (J x M)
+
+    Returns:
+
+    """
+    wrv = ((weights * (y - X @ coefficients).T) @ (y - X @ coefficients)) / weights.sum()
+    return wrv
 
 
-def calculate_assignments(assignment_weights, stochastic):
-    '''
+def calculate_assignments(assignment_weights, stochastic=False):
+    """
     Assign each set of points to a component.
     If stochastic is true, randomly sample proportional to the assignment_weights.
     Otherwise, assign the component with the maximum weight.
     This is the C-step in the CEM algorithm.
-    '''
+
+    Args:
+        assignment_weights (np.ndarray):
+        stochastic (bool):
+
+    Returns:
+
+    """
     if stochastic:
-        return np.array([np.random.choice(len(row), p=row) for row in assignment_weights])
-    return np.argmax(assignment_weights, axis=1)
+        assignments = np.array([np.random.choice(len(row), p=row) for row in assignment_weights])
+    else:
+        assignments = np.argmax(assignment_weights, axis=1)
+    return assignments
 
 
-def calculate_assignment_weights(x, y, component_weights, coefficients, variances):
+def calculate_assignment_weights(X, y, component_weights, coefficients, variances):
     """
     Determine a probability for each component to generate each point
     This is the E-step in the CEM algorithm
+
+    Args:
+        X (np.ndarray): source data (N x M matrix)
+        y (np.ndarray): target data (N x 1 matrix)
+        component_weights (np.ndarray): prior probability (pi_j) (J x 1)
+        coefficients (np.ndarray): coefficients for mean in linear regression, i.e., beta (J x M)
+        variances (np.ndarray): variances associated with components (J x 1)
+
+    Returns:
+
     """
     num_components = len(component_weights)
 
     # Initialize the new assignment weights
-    assignment_weights = np.ones((len(x), num_components), dtype=float)
+    assignment_weights = np.ones((len(X), num_components), dtype=float)  # N x J
 
     # Calculate the likelihood of the points one at a time
     # to prevent underflow issues
-    for xi, yi in zip(x, y):
+    for xi, yi in zip(X, y):
         # Get the mean of each component
-        mu = np.array([xi.dot(b) for b in coefficients])
+        mu = coefficients.dot(xi)
 
         # Get the standard deviation of each component
-        sigma = np.array([np.sqrt(v) for v in variances])
+        sigma = np.sqrt(variances)
 
         # Calculate the likelihood of this data point coming from each component
         temp_weights = norm.pdf(yi, loc=mu, scale=sigma)
@@ -99,115 +190,125 @@ def calculate_assignment_weights(x, y, component_weights, coefficients, variance
     return assignment_weights
 
 
-def maximum_likelihood_parameters(x, y, num_components, num_features, assignments, assignment_weights):
+def maximum_likelihood_parameters(X, y, num_components, assignments, assignment_weights):
     """
     Calculate the parameter values that maximize the likelihood of the data.
     This is the M-step of the CEM algorithm.
+
+    Args:
+        X (np.ndarray): source data (N x M matrix)
+        y (np.ndarray): target data (N x K matrix)
+        num_components (int): number of components to fit (J)
+        assignments:
+        assignment_weights:
+
+    Returns:
+
     """
-    # Calculate the weight of each component in the mixture
-    component_weights = np.array([(assignments == i).sum() for i in range(num_components)]) / float(len(assignments))
+    num_features = X.shape[1]
+
+    # Calculate the weight of each component in the mixture (w_ij in [2])
+    component_weights = np.array([(assignments == i).sum() for i in range(num_components)]) / float(len(assignments))  # J x 1
 
     # Calculate the regression coefficients and variance for each component
-    coefficients = np.zeros((num_components, num_features))
-    variances = np.zeros(num_components)
-    for i in xrange(num_components):
+    coefficients = np.zeros((num_components, num_features))  # J x M
+    variances = np.zeros(num_components)  #  J x 1
+    for i in range(num_components):
         # Get the points that are members of this component
         points = np.where(assignments == i)[0]
 
         # Get the weights for each set
-        subset_weights = assignment_weights[points][:, i]
+        weights = assignment_weights[points, i]
 
         # If no points were assigned to this cluster, soft-assign it random points
         # TODO: Is there a better way to proceed here? Some sort of split-merge type thing?
         if len(points) == 0:
             points = np.random.choice(len(assignments), size=np.random.randint(1, len(assignments)), replace=False)
-            subset_weights = np.ones(len(points)) / float(len(points))
-
-        # Get the data associated with this component
-        component_x = []
-        component_y = []
-        weights = []
-        for key, subset_weight in zip(keys[points], subset_weights):
-            # Get the data for this subset
-            x, y = data[key]
-
-            # Add the points to the overall values to regress on
-            component_x.extend(x)
-            component_y.extend(y)
-
-            # Each point in a set gets equal weight
-            weights.extend([subset_weight / float(len(y))] * len(y))
-
-        # Convert the results to numpy arrays
-        component_x = np.array(component_x)
-        component_y = np.array(component_y)
-        weights = np.array(weights)
+            weights = np.ones(len(points)) / float(len(points))
 
         # Get the weighted least squares coefficients
-        coefficients[i] = weighted_linear_regression(component_x, component_y, weights)
+        coefficients[i] = weighted_linear_regression(X, y, weights)
 
         # Get the variance of the component given the coefficients
-        variances[i] = weighted_regression_variance(component_x, component_y, weights, coefficients[i])
+        variances[i] = weighted_regression_variance(X, y, weights, coefficients[i])
 
     return (component_weights, coefficients, variances)
 
 
-def data_log_likelihood(data, keys, assignments, component_weights, coefficients, variances):
-    '''
+def data_log_likelihood(X, y, assignments, component_weights, coefficients, variances):
+    """
     Calculate the log-likelihood of the data being generated by the mixture model
     with the given parameters.
-    '''
-    log_likelihood = 0
-    for i, key in enumerate(keys):
-        x, y = data[key]
 
-        assigned = assignments[i]
+    Args:
+        X:
+        y:
+        assignments:
+        component_weights:
+        coefficients:
+        variances:
 
-        mu = x.dot(coefficients[assigned])
-        sigma = np.sqrt(variances[assigned])
+    Returns:
 
-        log_likelihood += np.log(norm.pdf(y, loc=mu, scale=sigma)).sum()
-        log_likelihood += np.log(component_weights[assigned])
+    """
+    mu = X.dot(coefficients[assignments])
+    sigma = np.sqrt(variances[assignments])
+
+    log_likelihood = np.log(norm.pdf(y, loc=mu, scale=sigma)).sum() + np.log(component_weights[assignments])
 
     return log_likelihood
 
-def fit_mixture(data, keys, num_components, max_iterations, stochastic=False, verbose=False, threshold=0.00001):
+
+def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshold=1e-5):
     """
     Run the classification expecatation-maximization (CEM) algorithm to fit a maximum likelihood model.
     Note that the result is a local optimum, not necessarily a global one.
+
+    Args:
+        X (np.ndarray): source data (N x M matrix)
+        y (np.ndarray): target data (N x 1 matrix)
+        num_components (int): number of components to fit (J)
+        max_iterations (int): maximum number of iterations to allow
+        stochastic (bool): calculate weights with a stochastic algorithm or not
+        threshold (float): threshold at which iterations stop
+
+    Returns:
+
     """
-    num_features = data.values()[0][0].shape[1]
+    num_features = X.shape[1]  # M
+
+    # Initialize the results
+    results = MixtureResults(num_components)
 
     prev_log_likelihood = 1
     cur_log_likelihood = 0
     cur_iteration = 0
 
     # Random initialization
-    assignment_weights = np.random.uniform(size=(len(data), num_components))
-    assignment_weights /= assignment_weights.sum(axis=1)[:, np.newaxis]
+    assignment_weights = np.random.uniform(size=(X.shape[0], num_components))  # N x J
+    assignment_weights /= assignment_weights.sum(axis=1)[:, np.newaxis]  # (N x J) / (N x 1)
 
     # Initialize using the normal steps now
-    assignments = calculate_assignments(assignment_weights, True)
+    assignments = calculate_assignments(assignment_weights, stochastic=True)  # N x 1
 
-    component_weights, coefficients, variances = maximum_likelihood_parameters(data, keys, num_components, num_features,
+    component_weights, coefficients, variances = maximum_likelihood_parameters(X, y, num_components,
                                                                                assignments, assignment_weights)
 
     while np.abs(prev_log_likelihood - cur_log_likelihood) > threshold and cur_iteration < max_iterations:
 
         # Calculate the expectation weights
-        assignment_weights = calculate_assignment_weights(data, keys, component_weights, coefficients, variances)
+        assignment_weights = calculate_assignment_weights(X, y, component_weights, coefficients, variances)  # N x J
 
         # Assign a value to each of the points
-        assignments = calculate_assignments(assignment_weights, stochastic=stochastic)
+        assignments = calculate_assignments(assignment_weights, stochastic=stochastic)  # N x 1
 
-        # Maximize the likelihood of the parameters
-        component_weights, coefficients, variances = maximum_likelihood_parameters(data, keys, num_components,
-                                                                                   num_features, assignments,
-                                                                                   assignment_weights)
+        # Maximize the likelihood of the parameters  (J x 1, J x M, J x 1)
+        component_weights, coefficients, variances = maximum_likelihood_parameters(X, y, num_components,
+                                                                                   assignments, assignment_weights)
 
         # Calculate the total data log-likelihood
         prev_log_likelihood = cur_log_likelihood
-        cur_log_likelihood = data_log_likelihood(data, keys, assignments, component_weights, coefficients, variances)
+        cur_log_likelihood = data_log_likelihood(X, y, assignments, component_weights, coefficients, variances)
 
         # Add the iteration to the results
         results.add_iteration(assignments, component_weights, coefficients, variances, cur_log_likelihood)
@@ -218,3 +319,48 @@ def fit_mixture(data, keys, num_components, max_iterations, stochastic=False, ve
     results.finish()
 
     return results
+
+
+def fit_worker(worker_params):
+    X, y, num_components, max_iterations, stochastic = worker_params
+    return fit_mixture(X, y, num_components, max_iterations, stochastic=stochastic)
+
+
+def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stochastic=False, num_workers=1):
+    """
+    Run the CEM algorithm for num_restarts times and return the best result.
+
+    Args:
+        X:
+        y:
+        num_components:
+        max_iterations:
+        num_restarts:
+        stochastic:
+        num_workers:
+
+    Returns:
+
+    """
+    max_result = None
+    max_likelihood = None
+
+    # Fit the mixture with every restart done in parallel
+    if num_workers > 1:
+        pool = Pool(num_workers)
+        worker_params = [(X, y, num_components, max_iterations, stochastic) for _ in range(num_restarts)]
+        results = pool.map(fit_worker, worker_params)
+    else:
+        results = [fit_mixture(X, y, num_components, max_iterations, stochastic=stochastic) for _ in range(num_restarts)]
+
+    for trial in range(num_restarts):
+        result = results[trial]
+
+        if max_likelihood is None or result.log_likelihoods.max() > max_likelihood:
+            max_result = result
+            max_likelihood = result.log_likelihoods.max()
+
+    if num_workers > 1:
+        pool.terminate()
+
+    return max_result
