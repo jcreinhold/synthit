@@ -28,7 +28,7 @@ def arg_parser():
     parser = argparse.ArgumentParser(description='synthesize MR images via patch-based regression')
 
     required = parser.add_argument_group('Required')
-    required.add_argument('-s', '--source-dir', type=str, required=True,
+    required.add_argument('-s', '--source-dir', type=str, required=True, nargs='+',
                         help='path to directory with domain images')
     required.add_argument('-t', '--trained-model', type=str, required=True,
                           help='path to the trained model (.pkl)')
@@ -58,13 +58,14 @@ def main():
             if not os.path.exists(args.output_dir):
                 os.mkdir(args.output_dir)
         ps = joblib.load(args.trained_model)
-        img_fns = glob_nii(args.source_dir)
-        mask_fns = [None] * len(img_fns) if args.mask_dir is None else glob_nii(args.mask_dir)
-        for i, (img_fn, mask_fn) in enumerate(zip(img_fns, mask_fns), 1):
-            dirpath, base, _ = split_filename(img_fn)
-            logger.info('Synthesizing image from: {} ({:d}/{:d})'.format(base, i, len(img_fns)))
+        img_fns = [glob_nii(sd) for sd in args.source_dir]
+        mask_fns = [None] * len(img_fns[0]) if args.mask_dir is None else glob_nii(args.mask_dir)
+        for i, (*img_fn, mask_fn) in enumerate(zip(zip(*img_fns), mask_fns), 1):
+            img_fn = img_fn[0]
+            dirpath, base, _ = split_filename(img_fn[0])
+            logger.info('Synthesizing image from: {} ({:d}/{:d})'.format(base, i, len(mask_fns)))
             mask = None if mask_fn is None else ants.image_read(mask_fn)
-            img = ants.image_read(img_fn) if mask is None else ants.image_read(img_fn) * mask
+            img = [ants.image_read(img_fn_) if mask is None else ants.image_read(img_fn_) * mask for img_fn_ in img_fn]
             synth = ps.predict(img, mask)
             out_fn = os.path.join(dirpath if args.output_dir is None else args.output_dir, base + '_syn.nii.gz')
             logger.info('Saving image: {}'.format(out_fn))
