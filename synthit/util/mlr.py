@@ -34,19 +34,21 @@ logger = logging.getLogger(__name__)
 class LinearRegressionMixture:
     """ Mixture of linear regressors model """
 
-    def __init__(self, num_components, max_iterations=20, threshold=1e-10, num_restarts=1, num_workers=1, k=5):
+    def __init__(self, num_components, max_iterations=20, threshold=1e-10, num_restarts=1, num_workers=1, k=5, seed=1):
         self.num_components = num_components
         self.max_iterations = max_iterations
         self.threshold = threshold
         self.num_restarts = num_restarts
         self.num_workers = num_workers
         self.k = k
+        self.seed = seed
 
     def fit(self, X, y):
         if self.num_restarts > 1:
-            results = fit_with_restarts(X, y, self.num_components, self.max_iterations, self.num_restarts, False, self.num_workers)
+            results = fit_with_restarts(X, y, self.num_components, self.max_iterations, self.num_restarts, False,
+                                        self.threshold, self.num_workers, self.seed)
         else:
-            results = fit_mixture(X, y, self.num_components, self.max_iterations, False, self.threshold)
+            results = fit_mixture(X, y, self.num_components, self.max_iterations, False, self.threshold, self.seed)
         #del results.iterations  # delete this since it is large
         self.results = results
         self.component_weights = results.best.component_weights
@@ -271,9 +273,9 @@ def data_log_likelihood(X, y, assignments, component_weights, coefficients, vari
     return log_likelihood
 
 
-def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshold=1e-5):
+def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshold=1e-5, seed=1):
     """
-    Run the classification expecatation-maximization (CEM) algorithm to fit a maximum likelihood model.
+    Run the classification expectation-maximization (CEM) algorithm to fit a maximum likelihood model.
     Note that the result is a local optimum, not necessarily a global one.
 
     Args:
@@ -283,11 +285,16 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
         max_iterations (int): maximum number of iterations to allow
         stochastic (bool): calculate weights with a stochastic algorithm or not
         threshold (float): threshold at which iterations stop
+        seed (int): random state seed for reproducibility
 
     Returns:
         results (MixtureResults): instance of the MixtureResults class which
             holds the determined coefficients and all that good stuff
     """
+
+    # set random seed for reproducibility
+    np.random.seed(seed)
+
     # Initialize the results
     results = MixtureResults(num_components)
 
@@ -340,11 +347,11 @@ def fit_mixture(X, y, num_components, max_iterations, stochastic=False, threshol
 
 
 def __fit_worker(worker_params):
-    X, y, num_components, max_iterations, stochastic = worker_params
-    return fit_mixture(X, y, num_components, max_iterations, stochastic=stochastic)
+    return fit_mixture(*worker_params)
 
 
-def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stochastic=False, num_workers=1):
+def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stochastic=False, threshold=1e-5,
+                      num_workers=1, seed=1):
     """
     Run the CEM algorithm for num_restarts times and return the best result.
 
@@ -355,7 +362,10 @@ def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stocha
         max_iterations (int): maximum number of iterations to allow
         num_restarts (int): number of times to restart to find better local optimum
         stochastic (bool): calculate weights with a stochastic algorithm or not
+        threshold (float): threshold at which iterations stop
         num_workers (int): number of processors to use for parallel processing
+        seed (int): random state seed for reproducibility (seed will be incremented across
+            workers to ensure different initializations from each worker)
 
     Returns:
         max_result (MixtureResults): instance of the MixtureResults class which
@@ -367,10 +377,12 @@ def fit_with_restarts(X, y, num_components, max_iterations, num_restarts, stocha
     # Fit the mixture with every restart done in parallel
     if num_workers > 1 or num_workers == -1:
         pool = Pool(num_workers if num_workers > 1 else None)
-        worker_params = [(X, y, num_components, max_iterations, stochastic) for _ in range(num_restarts)]
+        worker_params = [(X, y, num_components, max_iterations, stochastic, threshold, seed+100*i)
+                         for i in range(num_restarts)]
         results = pool.map(__fit_worker, worker_params)
     else:
-        results = [fit_mixture(X, y, num_components, max_iterations, stochastic=stochastic) for _ in range(num_restarts)]
+        results = [fit_mixture(X, y, num_components, max_iterations, stochastic, threshold, seed+100*i)
+                   for i in range(num_restarts)]
 
     for trial in range(num_restarts):
         result = results[trial]

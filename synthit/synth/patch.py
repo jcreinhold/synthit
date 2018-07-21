@@ -75,33 +75,38 @@ class PatchSynth():
             X = poly.fit_transform(X)
         logger.info('Starting synthesis')
         y = self.regr.predict(X)
-        synthesized = source.numpy()
-        msk = np.zeros(source.numpy().shape, dtype=bool)
+        synthesized = source[0].numpy()
+        msk = np.zeros(synthesized.shape, dtype=bool)
         msk[idxs] = True
         synthesized[msk] = y.flatten()
         synthesized[~msk] = np.min(y)-1
-        predicted = source.new_image_like(synthesized)
+        predicted = source[0].new_image_like(synthesized)
         return predicted
 
     def extract_patches_train(self, source, target, mask=None):
         """ get patches and corresponding target voxel intensity values for training """
         all_patches = []
         all_out = []
-        if len(source) != len(target) or len(source) == 0:
+        if any([len(source_) != len(target) for source_ in source]) or len(target) == 0:
             raise SynthError('Number of source and target images must be the same in training and non-zero!')
-        mask = [None] * len(source) if mask is None else mask
-        for i, (src, tgt, msk) in enumerate(zip(source, target, mask), 1):
-            logger.info('Extracting patches ({:d}/{:d})'.format(i, len(source)))
-            src_data = src.numpy()
+        mask = [None] * len(target) if mask is None else mask
+        for i, (*src, tgt, msk) in enumerate(zip(zip(*source), target, mask), 1):
+            src = src[0]  # extract the tuple since it is currently inside a list
+            logger.info('Extracting patches ({:d}/{:d})'.format(i, len(target)))
+            src_data = [src_.numpy() for src_ in src]
             tgt_data = tgt.numpy()
-            idxs = np.where(src_data > self.threshold) if msk is None else np.where(msk.numpy() == 1)
+            # only use the first for consistency across indices since co-registration assumed
+            idxs = np.where(src_data[0] > self.threshold) if msk is None else np.where(msk.numpy() == 1)
             if self.n_samples is not None:
                 if idxs[0].size < self.n_samples:
                     logger.warning('n_samples is greater than the number of samples available in the image ({} > {})'
                                    .format(self.n_samples, idxs[0].size))
                 choices = np.random.choice(np.arange(idxs[0].size), int(self.n_samples), replace=True)
                 idxs = tuple([idx[choices] for idx in idxs])
-            patches = self.__extract_patches(src_data, idxs)
+            if len(source) == 1:
+                patches = self.__extract_patches(src_data[0], idxs)
+            else:
+                patches = np.hstack([self.__extract_patches(src_data_, idxs) for src_data_ in src_data]).squeeze()
             out = tgt_data[idxs][:, np.newaxis] if not self.mean else self.__extract_patches(tgt_data, idxs)
             all_patches.append(patches)
             all_out.append(out)
@@ -111,9 +116,12 @@ class PatchSynth():
 
     def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """
-        src_data = source.numpy()
-        idxs = np.where(src_data > self.threshold) if mask is None else np.where(mask.numpy() == 1)
-        patches = self.__extract_patches(src_data, idxs)
+        src_data = [src.numpy() for src in source]
+        idxs = np.where(src_data[0] > self.threshold) if mask is None else np.where(mask.numpy() == 1)
+        if len(source) == 1:
+            patches = self.__extract_patches(src_data[0], idxs)
+        else:
+            patches = np.hstack([self.__extract_patches(src_data_, idxs) for src_data_ in src_data]).squeeze()
         return patches, idxs
 
     def __extract_patches(self, data, idxs):

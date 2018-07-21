@@ -32,18 +32,18 @@ class TestUtilities(unittest.TestCase):
 
     def test_patch_synth_default(self):
         ps = PatchSynth(self.regr, n_samples=10, flatten=False)
-        ps.fit([self.img], [self.img], [self.mask])
-        _ = ps.predict(self.img, self.mask)
+        ps.fit([[self.img]], [self.img], [self.mask])
+        _ = ps.predict([self.img], self.mask)
 
     def test_patch_synth_one_sample(self):
         ps = PatchSynth(self.regr, patch_size=1, n_samples=10, context_radius=(0,), flatten=False)
-        ps.fit([self.img], [self.img], [self.mask])
-        _ = ps.predict(self.img, self.mask)
+        ps.fit([[self.img]], [self.img], [self.mask])
+        _ = ps.predict([self.img], self.mask)
 
     def test_patch_synth_neighbors_only(self):
        ps = PatchSynth(self.regr, patch_size=0, n_samples=10, context_radius=(1,), flatten=False)
-       ps.fit([self.img], [self.img], [self.mask])
-       _ = ps.predict(self.img, self.mask)
+       ps.fit([[self.img]], [self.img], [self.mask])
+       _ = ps.predict([self.img], self.mask)
 
     def tearDown(self):
         del self.img, self.mask
