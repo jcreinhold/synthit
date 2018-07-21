@@ -41,10 +41,11 @@ class PatchSynth():
         mean (bool): use the mean of the patch instead of the patch values
         full_patch (bool): use a full patch instead of the 6-nearest neighbors
         flatten (bool): flatten the target voxel intensities (needed in some types of regressors)
+        use_xyz (bool): use x,y,z coordinates as features
     """
 
     def __init__(self, regr, patch_size=3, n_samples=1e5, context_radius=(3,5,7), threshold=0, poly_deg=None,
-                 mean=False, full_patch=False, flatten=True):
+                 mean=False, full_patch=False, flatten=True, use_xyz=False):
         self.patch_size = patch_size
         self.n_samples = n_samples
         self.context_radius = context_radius
@@ -54,14 +55,20 @@ class PatchSynth():
         self.economy_patch = not full_patch
         self.flatten = flatten
         self.regr = regr
+        self.use_xyz = use_xyz
 
     def fit(self, source, target, mask=None):
         """ train the model for synthesis given a set of source and target images """
-        X, y = self.extract_patches_train(source, target, mask)
+        if not self.use_xyz:
+            X, y = self.extract_patches_train(source, target, mask)
+        else:
+            X, y, xyz = self.extract_patches_train(source, target, mask)
         if self.poly_deg is not None:
             logger.info('Creating polynomial features')
             poly = PolynomialFeatures(self.poly_deg)
             X = poly.fit_transform(X)
+        if self.use_xyz:
+            X = np.hstack((X, xyz))
         logger.info('Training the model')
         self.regr.fit(X, y.flatten() if self.flatten else y)
 
@@ -73,6 +80,9 @@ class PatchSynth():
             logger.info('Creating polynomial features')
             poly = PolynomialFeatures(self.poly_deg)
             X = poly.fit_transform(X)
+        if self.use_xyz:
+            xyz = np.hstack([idx[:, np.newaxis] for idx in idxs])
+            X = np.hstack((X, xyz))
         logger.info('Starting synthesis')
         y = self.regr.predict(X)
         synthesized = source[0].numpy()
@@ -87,6 +97,8 @@ class PatchSynth():
         """ get patches and corresponding target voxel intensity values for training """
         all_patches = []
         all_out = []
+        if self.use_xyz:
+            all_indices = []
         if any([len(source_) != len(target) for source_ in source]) or len(target) == 0:
             raise SynthError('Number of source and target images must be the same in training and non-zero!')
         mask = [None] * len(target) if mask is None else mask
@@ -110,9 +122,13 @@ class PatchSynth():
             out = tgt_data[idxs][:, np.newaxis] if not self.mean else self.__extract_patches(tgt_data, idxs)
             all_patches.append(patches)
             all_out.append(out)
+            if self.use_xyz:
+                all_indices.append(idxs)
         all_patches = np.vstack(all_patches)
         all_out = np.vstack(all_out)
-        return all_patches, all_out
+        if self.use_xyz:
+            all_indices = np.vstack([np.hstack([idx[:, np.newaxis] for idx in idx_]) for idx_ in all_indices])
+        return (all_patches, all_out) if not self.use_xyz else (all_patches, all_out, all_indices)
 
     def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """

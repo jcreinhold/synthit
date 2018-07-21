@@ -60,6 +60,8 @@ def arg_parser():
                                     '(None means do not use polynomial features) [Default=None]')
     synth_options.add_argument('--mean', action='store_true', default=False,
                                help='learn to take the mean value of input patch to the mean value of output patches')
+    synth_options.add_argument('--use-xyz', action='store_true', default=False,
+                               help='use the x,y,z coordinates of voxels as features')
 
     regr_options = parser.add_argument_group('Regressor Options')
     regr_options.add_argument('-n', '--n-jobs', type=int, default=-1,
@@ -120,7 +122,7 @@ def main():
             raise SynthError('Invalid regressor type: {}. rf, xg, pr, and mlr are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
-                        args.mean, args.full_patch, flatten)
+                        args.mean, args.full_patch, flatten, args.use_xyz)
         source = [ps.image_list(sd) for sd in args.source_dir]
         target = ps.image_list(args.target_dir)
         if any([len(source_) != len(target) for source_ in source]):

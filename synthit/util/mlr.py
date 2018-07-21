@@ -54,7 +54,7 @@ class LinearRegressionMixture:
         self.component_weights = results.best.component_weights
         self.coefficients = results.best.coefficients
         self.variances = results.best.variances
-        neigh = KNeighborsClassifier(self.k)
+        neigh = KNeighborsClassifier(self.k, n_jobs=self.num_workers)
         self.classifier = neigh.fit(X, results.best.assignments)
 
     def predict(self, X):
