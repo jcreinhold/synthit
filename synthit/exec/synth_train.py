@@ -12,6 +12,7 @@ Created on: Jun 20, 2018
 
 import argparse
 import logging
+import os
 import sys
 import warnings
 
@@ -42,6 +43,9 @@ def arg_parser():
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
+    options.add_argument('--cross-validate', action='store_true', default=False,
+                         help='do leave one out cross-validation on the provided dataset (e.g., if 5 datasets are '
+                              'provided, then 5 models are trained where all the data are used except one).')
 
     synth_options = parser.add_argument_group('Synthesis Options')
     synth_options.add_argument('--patch-size', type=int, default=3,
@@ -122,7 +126,7 @@ def main():
             regr = BayesianRegression()
             flatten = False
         else:
-            raise SynthError('Invalid regressor type: {}. rf, xg, pr, and mlr are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, br}} are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
                         args.mean, args.full_patch, flatten, args.use_xyz)
@@ -138,10 +142,24 @@ def main():
             target = [tgt * mask for (tgt, mask) in zip(target, masks)]
         else:
             masks = [None] * len(target)
-        ps.fit(source, target, masks)
-        outfile = 'trained_model.pkl' if args.output is None else args.output
-        logger.info('Saving trained model: {}'.format(outfile))
-        joblib.dump(ps, outfile)
+        if not args.cross_validate:
+            ps.fit(source, target, masks)
+            outfile = 'trained_model.pkl' if args.output is None else args.output
+            logger.info('Saving trained model: {}'.format(outfile))
+            joblib.dump(ps, outfile)
+        else:
+            for i in range(len(target)):
+                src = [[src_ for k, src_ in enumerate(source_) if i != k] for source_ in source]
+                tgt = [tgt_ for k, tgt_ in enumerate(target) if i != k]
+                msk = [msk_ for k, msk_ in enumerate(masks) if i != k]
+                ps.fit(src, tgt, msk)
+                if args.output is not None:
+                    name, ext = os.path.splitext(args.output)
+                    outfile = name + '_{}'.format(i) + ext
+                else:
+                    outfile = 'trained_model_{}.pkl'.format(i)
+                logger.info('Saving trained model: {}'.format(outfile))
+                joblib.dump(ps, outfile)
         return 0
     except Exception as e:
         logger.exception(e)

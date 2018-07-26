@@ -4,10 +4,18 @@
 synthit.models.br
 
 implements a bayesian regressor with pyro
+the implementation was directly lifted from [1]
+
+References:
+    [1] "Bayesian Regression", pyro, 2018. [Online]. Available:
+        http://pyro.ai/examples/bayesian_regression.html. [Accessed: 22- Jul- 2018].
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
 Created on: Jul 21, 2018
+
+References;
+
 """
 
 __all__ = ['BayesianRegression']
