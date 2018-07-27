@@ -13,7 +13,7 @@ Created on: Jun 26, 2018
 __all__ = ['synth_quality',
            'quality_simplex_area',
            'normalized_cross_correlation',
-           'normalized_mutual_info',
+           'entropy_normalized_mutual_info',
            'mutual_info',
            'mssim']
 
@@ -30,7 +30,7 @@ def synth_quality(synth, truth, mask=None):
     """
     compare a synthesized image to the truth image by calculating metrics
     associated with image quality, the metrics are:
-    (normalized) mutual information, global correlation [2], and MSSIM [3]
+    (entropy normalized) mutual information, global correlation [2], and MSSIM [3]
 
     Args:
         synth (np.ndarray): synthesized image
@@ -47,14 +47,14 @@ def synth_quality(synth, truth, mask=None):
             “Image quality assessment: From error visibility to structural similarity,”
             IEEE Trans. Image Process., vol. 13, no. 4, pp. 600–612, 2004.
     """
-    metrics = ['NMI', 'NCC', 'MSSIM']
+    metrics = ['ENMI', 'NCC', 'MSSIM']
     if mask is None:
         mask = truth > 0
-    nmi = normalized_mutual_info(synth, truth, mask)
+    nmi = entropy_normalized_mutual_info(synth, truth, mask)
     gc = normalized_cross_correlation(synth, truth, mask)
     ssim = mssim(synth, truth, mask)
     stats = [nmi, gc, ssim]
-    logger.info('NMI: {:0.5f}, NCC: {:0.5f}, MSSIM: {:0.5f}'.format(nmi, gc, ssim))
+    logger.info('ENMI: {:0.5f}, NCC: {:0.5f}, MSSIM: {:0.5f}'.format(nmi, gc, ssim))
     return stats, metrics
 
 
@@ -90,9 +90,9 @@ def normalized_cross_correlation(x, y, mask=None):
     return ncc
 
 
-def normalized_mutual_info(x, y, mask=None, bins=100):
+def entropy_normalized_mutual_info(x, y, mask=None, bins=100):
     """
-    compute a normalized mutual information (i.e., mutual information divided
+    compute an entropy normalized mutual information (i.e., mutual information divided
     by its maximum value, specifically, the entropy of y)
 
     Args:

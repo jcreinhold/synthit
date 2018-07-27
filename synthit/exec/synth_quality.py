@@ -38,6 +38,8 @@ def arg_parser():
                          help='type of output image to save (e.g., png, pdf, etc.)')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
+    options.add_argument('--mean', action='store_true', default=False,
+                         help="plot the mean of the quality metrics for the directory")
     return parser
 
 
@@ -52,7 +54,7 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        plot_dir_synth_quality(args.synth_dir, args.truth_dir, args.output_dir, args.mask_dir, args.output_type)
+        plot_dir_synth_quality(args.synth_dir, args.truth_dir, args.output_dir, args.mask_dir, args.output_type, args.mean)
         return 0
     except Exception as e:
         logger.exception(e)
