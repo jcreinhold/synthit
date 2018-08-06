@@ -17,19 +17,23 @@ import warnings
 
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
-    from synthit import plot_dir_synth_quality
+    from synthit import plot_dir_synth_quality, plot_synth_quality_bar
 
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='create profile views of every nifti image in a directory')
 
     required = parser.add_argument_group('Required')
-    required.add_argument('-s', '--synth-dir', type=str, required=True,
+    required.add_argument('-s', '--synth-dir', type=str, required=True, nargs='+',
                         help='path to directory of synthesized images')
     required.add_argument('-t', '--truth-dir', type=str, required=True,
                           help='path to corresponding truth images')
 
     options = parser.add_argument_group('Optional')
+    required.add_argument('-na', '--norm-algs', type=str, nargs='+',
+                          help='normalizaiton algorithms, must be provided if multiple directories provided')
+    required.add_argument('-sa', '--synth-algs', type=str, nargs='+',
+                          help='synthesis algorithms, must be provided if multiple directories provided')
     options.add_argument('-o', '--output-dir', type=str, default=None,
                          help='directory to output the corresponding views')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
@@ -54,7 +58,12 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        plot_dir_synth_quality(args.synth_dir, args.truth_dir, args.output_dir, args.mask_dir, args.output_type, args.mean)
+        if len(args.synth_dir) == 1:
+            plot_dir_synth_quality(args.synth_dir[0], args.truth_dir[0], args.output_dir,
+                                   args.mask_dir, args.output_type, args.mean)
+        else:
+            _ = plot_synth_quality_bar(args.synth_dir, args.truth_dir, args.norm_algs, args.synth_algs,
+                                       args.output_dir, args.mask_dir, args.output_type)
         return 0
     except Exception as e:
         logger.exception(e)

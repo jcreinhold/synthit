@@ -36,8 +36,10 @@ def arg_parser():
                          help='size of output image')
     options.add_argument('-ot', '--output-type', type=str, default='png',
                          help='type of output image to save (e.g., png, pdf, etc.)')
-    options.add_argument('--slices', action='store_true', default=False,
-                         help='plot slices instead of ortho view')
+    options.add_argument('--slices', type=float, default=None, nargs='+',
+                         help='if provided (relative slices), plot these slices instead of ortho view')
+    options.add_argument('--scale', type=float, default=None, nargs='+',
+                         help='if provided these *two* floats between 0 and 1 determine the dynamic range')
     options.add_argument('--trim', action='store_true', default=False,
                          help='trim output image of blank/white space outside the plot')
     options.add_argument('-v', '--verbosity', action="count", default=0,
@@ -57,7 +59,7 @@ def main():
     logger = logging.getLogger(__name__)
     try:
         directory_view(args.img_dir, args.output_dir, args.label_dir, args.figsize,
-                       args.output_type, not args.slices, args.trim)
+                       args.output_type, args.slices, args.trim, args.scale)
         return 0
     except Exception as e:
         logger.exception(e)

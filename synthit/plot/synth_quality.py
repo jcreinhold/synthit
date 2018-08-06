@@ -10,7 +10,8 @@ Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 Created on: Jun 26, 2018
 """
 
-__all__ = ['plot_dir_synth_quality',
+__all__ = ['plot_synth_quality_bar',
+           'plot_dir_synth_quality',
            'plot_synth_quality']
 
 import logging
@@ -31,6 +32,55 @@ try:
     sns.set(style='whitegrid', font_scale=2, rc={'grid.color': '.9'})
 except ImportError:
     logger.info('Seaborn not installed, so plots will not be as pretty. :-(')
+
+
+def plot_synth_quality_bar(synth_dirs, truth_dirs, norm_algs, synth_algs, out_dir=None, mask_dir=None, outtype='png'):
+    import pandas as pd
+    truth_dirs_ = sorted([dir_ for root, dir_, _ in os.walk(truth_dirs) if len(dir_) > 0][0])
+    truth_dirs_ = [os.path.join(truth_dirs, dir_) for dir_ in truth_dirs_]
+    if len(synth_algs) != len(synth_dirs) or len(norm_algs) != len(truth_dirs_):
+        raise SynthError('Number of algorithm names must equal number of directories provided')
+    stats, metrics, norm_alg, synth_alg = [], [], [], []
+    for i, (synth_dir_, synth_alg_) in enumerate(zip(synth_dirs, synth_algs)):
+        logger.info('Gathering quality metrics for {} ({:d}/{:d})'.format(synth_alg_, i+1, len(synth_algs)))
+        synth_dirs_ = sorted([dir_ for _, dir_, _ in os.walk(synth_dir_) if len(dir_) > 0][0])
+        synth_dirs_ = [os.path.join(synth_dir_, dir_) for dir_ in synth_dirs_]
+        for j, (norm_alg_, synth_dir, truth_dir) in enumerate(zip(norm_algs, synth_dirs_, truth_dirs_)):
+            logger.debug(synth_dir)
+            logger.info('Gathering quality metrics for {} ({:d}/{:d})'.format(norm_alg_, j+1, len(norm_algs)))
+            synth_fns = glob_nii(synth_dir)
+            truth_fns = glob_nii(truth_dir)
+            if len(synth_fns) != len(truth_fns) or len(synth_fns) == 0:
+                raise SynthError('Number of synthesized and truth images must be equal and non-zero')
+            if mask_dir is None:
+                mask_fns = [None] * len(synth_fns)
+            else:
+                mask_fns = glob_nii(mask_dir)
+                if len(synth_fns) != len(mask_fns):
+                    raise SynthError('Number of images and masks must be equal and non-zero')
+            masks = [None if mask_fn is None else ants.image_read(mask_fn) for mask_fn in mask_fns]
+            synth = [ants.image_read(synth_fn) if mask is None else ants.image_read(synth_fn) * mask
+                     for synth_fn, mask in zip(synth_fns, masks)]
+            truth = [ants.image_read(truth_fn) if mask is None else ants.image_read(truth_fn) * mask
+                     for truth_fn, mask in zip(truth_fns, masks)]
+            for syn, th, mask in zip(synth, truth, masks):
+                stats_, metrics_ = synth_quality(syn.numpy(), th.numpy(), mask.numpy())
+                stats.extend(stats_)
+                metrics.extend(metrics_)
+                norm_alg.extend([norm_alg_] * len(metrics_))
+                synth_alg.extend([synth_alg_] * len(metrics_))
+    import ipdb; ipdb.set_trace()
+    data = pd.DataFrame(data={"Value": stats, "Metric": metrics,
+                              "Normalization Algorithm": norm_alg,
+                              "Synthesis Algorithm": synth_alg})
+    data.to_csv('data.csv')
+    if sns.__version__ == '0.9.0':
+        _ = sns.catplot(x="Normalization Algorithm", y="Value",
+                        hue="Synthesis Algorithm", col="Metric",
+                        data=data, kind="bar")
+        out_fn = os.path.join(out_dir, 'all_quality.' + outtype)
+        plt.savefig(out_fn)
+    return data
 
 
 def plot_dir_synth_quality(synth_dir, truth_dir, out_dir=None, mask_dir=None, outtype='png', mean=False):
