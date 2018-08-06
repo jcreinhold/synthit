@@ -133,7 +133,8 @@ def mutual_info(x, y, bins=200, return_joint=False):
 
 def mssim(x, y, mask=None):
     """ mean structural similarity (over a mask) """
-    mssim, S = compare_ssim(x, y, full=True)
+    min_val = min(0, np.min(x), np.min(y))  # for some reason, calculations change when values are negative
+    mssim, S = compare_ssim(x+min_val, y+min_val, full=True)
     if mask is not None:
         mssim = S[mask == 1].mean()
     return mssim

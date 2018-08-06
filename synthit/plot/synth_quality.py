@@ -114,6 +114,8 @@ def plot_synth_quality(synth, truth, mask, mean=False):
             all_stats[i, :] += np.array(stats_)
         mean_stats = all_stats.mean(0)
         std_stats = all_stats.std(0)
+        logger.info('Metrics: {}, {}, {}. Mean: {:0.2f}, {:0.2f}, {:0.2f}. STD: {:0.2f}, {:0.2f}, {:0.2f}'
+                    .format(*metrics, *mean_stats, *std_stats))
         ax = __radar_plot(metrics, mean_stats)
         ax = __radar_plot(metrics, mean_stats - std_stats, ax=ax, std=True)
         ax = __radar_plot(metrics, mean_stats + std_stats, ax=ax, std=True)
