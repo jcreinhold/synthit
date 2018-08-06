@@ -26,16 +26,17 @@ from scipy.spatial import ConvexHull
 logger = logging.getLogger(__name__)
 
 
-def synth_quality(synth, truth, mask=None):
+def synth_quality(synth, truth, mask=None, use_mi=False):
     """
     compare a synthesized image to the truth image by calculating metrics
     associated with image quality, the metrics are:
-    (entropy normalized) mutual information, global correlation [2], and MSSIM [3]
+    (entropy normalized) mutual information, normalized cross correlation [2], and MSSIM [3]
 
     Args:
         synth (np.ndarray): synthesized image
         truth (np.ndarray): image we are trying to synthesize
         mask (np.ndarray): mask for the images
+        use_mi (bool): use mutual info instead of enmi
 
     Returns:
         stats (list): list of stats calculated from the corresponding metrics
@@ -47,14 +48,17 @@ def synth_quality(synth, truth, mask=None):
             “Image quality assessment: From error visibility to structural similarity,”
             IEEE Trans. Image Process., vol. 13, no. 4, pp. 600–612, 2004.
     """
-    metrics = ['ENMI', 'NCC', 'MSSIM']
+    if not use_mi:
+        metrics = ['ENMI', 'NCC', 'MSSIM']
+    else:
+        metrics = ['MI', 'NCC', 'MSSIM']
     if mask is None:
         mask = truth > 0
-    nmi = entropy_normalized_mutual_info(synth, truth, mask)
+    mi = entropy_normalized_mutual_info(synth, truth, mask) if not use_mi else __mutual_info(synth, truth, mask)
     gc = normalized_cross_correlation(synth, truth, mask)
     ssim = mssim(synth, truth, mask)
-    stats = [nmi, gc, ssim]
-    logger.info('ENMI: {:0.5f}, NCC: {:0.5f}, MSSIM: {:0.5f}'.format(nmi, gc, ssim))
+    stats = [mi, gc, ssim]
+    logger.info('{}: {:0.5f}, NCC: {:0.5f}, MSSIM: {:0.5f}'.format(metrics[0], mi, gc, ssim))
     return stats, metrics
 
 
@@ -117,6 +121,15 @@ def entropy_normalized_mutual_info(x, y, mask=None, bins=100):
     hy = -np.sum(py[nzy] * np.log2(py[nzy]))  # entropy of y
     nmi = mi / hy
     return nmi
+
+
+def __mutual_info(x, y, mask):
+    if x.size != y.size:
+        raise ValueError('input arrays must be equal for a valid mutual info')
+    x_ = x.flatten() if mask is None else x[mask == 1]
+    y_ = y.flatten() if mask is None else y[mask == 1]
+    mi, _ = mutual_info(x_, y_)
+    return mi
 
 
 def mutual_info(x, y, bins=200, return_joint=False):

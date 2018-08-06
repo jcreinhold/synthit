@@ -64,12 +64,11 @@ def plot_synth_quality_bar(synth_dirs, truth_dirs, norm_algs, synth_algs, out_di
             truth = [ants.image_read(truth_fn) if mask is None else ants.image_read(truth_fn) * mask
                      for truth_fn, mask in zip(truth_fns, masks)]
             for syn, th, mask in zip(synth, truth, masks):
-                stats_, metrics_ = synth_quality(syn.numpy(), th.numpy(), mask.numpy())
+                stats_, metrics_ = synth_quality(syn.numpy(), th.numpy(), mask.numpy(), use_mi=True)
                 stats.extend(stats_)
                 metrics.extend(metrics_)
                 norm_alg.extend([norm_alg_] * len(metrics_))
                 synth_alg.extend([synth_alg_] * len(metrics_))
-    import ipdb; ipdb.set_trace()
     data = pd.DataFrame(data={"Value": stats, "Metric": metrics,
                               "Normalization Algorithm": norm_alg,
                               "Synthesis Algorithm": synth_alg})
