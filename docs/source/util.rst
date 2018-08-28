@@ -18,3 +18,9 @@ Synthesis Quality
 
 .. automodule:: synthit.util.quality
    :members:
+
+Neural Network Dataset Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: synthit.util.dataset
+   :members:
