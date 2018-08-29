@@ -32,9 +32,11 @@ class NiftiImageDataset(Dataset):
         target_dir (str): path to target images
         crop (function or None): supply a cropping function
         plot (bool): output the image as antsimages for plotting
+        device (torch.device): torch device to use (i.e., cpu or cuda) default=cpu
     """
 
-    def __init__(self, source_dir: str, target_dir: str, crop: Optional[Callable]=None, plot: bool=False):
+    def __init__(self, source_dir: str, target_dir: str,
+                 crop: Optional[Callable]=None, plot: bool=False, device: torch.device=torch.device('cpu')):
         self.source_dir = source_dir
         self.target_dir = target_dir
         self.source_fns = glob_nii(source_dir)
@@ -43,6 +45,7 @@ class NiftiImageDataset(Dataset):
             raise ValueError('Number of source and target images must be equal')
         self.crop = crop
         self.plot = plot
+        self.device = device
 
     def __len__(self):
         return len(self.source_fns)
@@ -74,6 +77,9 @@ class NiftiImageDataset(Dataset):
         elif self.crop is None and not self.plot:
             src_img = torch.from_numpy(src_img.numpy())
             tgt_img = torch.from_numpy(tgt_img.numpy())
+        if not self.plot:
+            src_img = src_img.to(self.device, dtype=torch.float32)  # set to float32 to conserve memory
+            tgt_img = tgt_img.to(self.device, dtype=torch.float32)
         return src_img, tgt_img
 
 

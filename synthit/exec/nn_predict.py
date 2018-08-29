@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-synthit.exec.synth_train
+synthit.exec.nn_predict
 
-command line interface to train a synthesis regressor
+command line interface to synthesize an MR (brain) image
+from a trained neural network model (see synthit.exec.nn_train)
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
@@ -41,15 +42,15 @@ def arg_parser():
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
 
-    synth_options = parser.add_argument_group('Synthesis Options')
-    synth_options.add_argument('--patch-size', type=int, default=64,
-                               help='patch size^3 extracted from image [Default=64]')
-
-    regr_options = parser.add_argument_group('Neural Network Options')
-    regr_options.add_argument('-bs', '--batch-size', type=int, default=5,
+    nn_options = parser.add_argument_group('Neural Network Options')
+    nn_options.add_argument('-n', '--n-jobs', type=int, default=4,
+                            help='number of processors to use [Default=4]')
+    nn_options.add_argument('-bs', '--batch-size', type=int, default=5,
                               help='batch size (num of images to process at once) [Default=5]')
-    regr_options.add_argument('--random-seed', default=0,
+    nn_options.add_argument('--random-seed', default=0,
                               help='set random seed for reproducibility [Default=0]')
+    nn_options.add_argument('--disable-cuda', action='store_true', default=False,
+                            help='Disable CUDA regardless of availability')
     return parser
 
 
@@ -64,12 +65,18 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        psz = args.patch_size
+        # set torch to use cuda if available (and desired) and set number of threads (TODO: verify set_num_threads works as expected)
+        device = torch.device("cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu")
+        torch.set_num_threads(args.n_jobs)
+
+        # load the trained model
         model = torch.load(args.trained_model)
         logger.debug(model)
 
+        # set convenience variables and grab filenames of images to synthesize
+        psz = model.patch_sz
         source_fns = glob_nii(args.source_dir)
-        for fn in source_fns:
+        for k, fn in enumerate(source_fns):
             img_ants = ants.image_read(fn)
             img = img_ants.numpy()
             if psz > 0:
@@ -88,17 +95,17 @@ def main():
                     if i in dec_idxs:
                         logger.info(f'{count}% Complete')
                         count += 5
-                    patch = torch.from_numpy(img[xx, yy, zz])[None, None, ...]
+                    patch = torch.from_numpy(img[xx, yy, zz]).to(device, dtype=torch.float32)[None, None, ...]
                     predicted = np.squeeze(model.forward(patch).data.numpy())
                     out_img[xx, yy, zz] = out_img[xx, yy, zz] + predicted
                     count_mtx[xx, yy, zz] = count_mtx[xx, yy, zz] + 1
                 count_mtx[count_mtx == 0] = 1  # avoid division by zero
                 out_img_ants = img_ants.new_image_like(out_img / count_mtx)
             else:
-                test_img_t = torch.from_numpy(img)
+                test_img_t = torch.from_numpy(img).to(device, dtype=torch.float32)[None, None, ...]
                 out_img = np.squeeze(model.forward(test_img_t).data.numpy())
                 out_img_ants = img_ants.new_image_like(out_img)
-            out_img_ants.to_filename(args.output)
+            out_img_ants.to_filename(args.output + str(k) + '.nii.gz')
 
         return 0
     except Exception as e:

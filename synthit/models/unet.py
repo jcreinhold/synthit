@@ -39,11 +39,12 @@ class Unet(torch.nn.Module):
         in Medical Image Computing and Computer-Assisted Intervention (MICCAI), 2016, pp. 424–432.
 
     """
-    def __init__(self, n_layers: int, kernel_sz: int=3, dropout_p: float=0):
+    def __init__(self, n_layers: int, kernel_sz: int=3, dropout_p: float=0, patch_sz: int=64):
         super(Unet, self).__init__()
         self.n_layers = n_layers
         self.kernel_sz = kernel_sz
         self.dropout_p = dropout_p
+        self.patch_sz = patch_sz
         def lc(n): return int(2 ** (5 + n))  # shortcut to layer count
         self.start = self.__dbl_conv_act(1, lc(0), lc(1))
         self.down_layers = nn.ModuleList([self.__dbl_conv_act(lc(n), lc(n), lc(n + 1))

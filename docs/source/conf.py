@@ -20,7 +20,7 @@ import sys
 MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble','sklearn.externals','sklearn.preprocessing',
                 'xgboost','matplotlib','matplotlib.pyplot','scipy','scipy.spatial','scipy.ndimage',
                 'scipy.stats','seaborn','skimage','skimage.measure','sklearn.neighbors','pyro','pyro.distributions',
-                'pyro.infer','pyro.optim','torch','torch.nn']
+                'pyro.infer','pyro.optim','torch','torch.nn','torch.utils','torch.utils.data']
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()

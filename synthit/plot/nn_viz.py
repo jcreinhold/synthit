@@ -27,7 +27,8 @@ except ImportError:
     logger.info('Seaborn not installed, so plots will not be as pretty. :-(')
 
 
-def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int=-6, filename: Optional[str]=None):
+def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int=1, ecolor: str='red',
+              filename: Optional[str]=None, ax: Optional=None, label: str='', plot_error: bool=True):
     """
     plot loss vs epoch for a given list (of lists) of loss values
 
@@ -35,19 +36,29 @@ def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int
         all_losses (list): list of lists of loss values per epoch
         figsize (tuple): two ints in a tuple controlling figure size
         scale (int): two ints in a tuple controlling figure size
+        ecolor (str): color of errorbars
         filename (str): if provided, save file at this path
+        ax (matplotlib ax object): supply an ax if desired
+        label (str): label for ax.plot
+        plot_error (bool): plot error bars or nah
 
     Returns:
         ax (matplotlib ax object): ax that the plot was created on
     """
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    if ax is None:
+        _, ax = plt.subplots(1, 1, figsize=figsize)
     avg_losses = np.array([np.mean(losses) for losses in all_losses]) * (10 ** scale)
-    std_losses = np.array([np.std(losses) for losses in all_losses]) * (10 ** scale)
-    ax.errorbar(np.arange(len(avg_losses)), avg_losses, yerr=std_losses, ecolor='red')
+    if plot_error:
+        std_losses = np.array([np.std(losses) for losses in all_losses]) * (10 ** scale)
+        ax.errorbar(np.arange(1,len(avg_losses)+1), avg_losses, yerr=std_losses, ecolor=ecolor, lw=3, fmt='none')
+    ax.plot(np.arange(1,len(avg_losses)+1), avg_losses, lw=3, label=label)
     ax.set_title('Loss vs Epoch')
-    ax.set_ylabel(r'MSE ($\times$' + f'10^{scale})')
+    ax.set_ylabel('Loss')
     ax.set_xlabel('Epoch')
-    ax.set_xlim((0, len(avg_losses)))
-    ax.set_ylim((0, np.max(avg_losses) + 1))
-    plt.savefig(filename)
+    if ax is not None:
+        plt.legend()
+    #ax.set_xlim((1, len(avg_losses)))
+    #ax.set_ylim((0, np.max(avg_losses) + (np.max(avg_losses) / 10)))
+    if filename is not None:
+        plt.savefig(filename)
     return ax
