@@ -58,14 +58,15 @@ class Unet(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.start(x)
-        dout = []
+        dout = [x]
+        x = F.max_pool3d(dout[-1], (2, 2, 2))
         for dl in self.down_layers:
             dout.append(dl(x))
             x = F.max_pool3d(dout[-1], (2, 2, 2))
-        x = self.up_conv[0](F.interpolate(self.bridge(x), scale_factor=2))
+        x = self.up_conv[0](F.interpolate(self.bridge(x), size=dout[-1].shape[2:]))
         for i, (ul, d) in enumerate(zip(self.up_layers, reversed(dout)), 1):
             x = ul(torch.cat((x, d), dim=1))
-            x = self.up_conv[i](F.interpolate(x, scale_factor=2))
+            x = self.up_conv[i](F.interpolate(x, size=dout[-i-1].shape[2:]))
         x = self.finish(torch.cat((x, dout[0]), dim=1))
         return x
 
