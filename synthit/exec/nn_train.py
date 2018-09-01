@@ -159,7 +159,7 @@ def main():
 
         # plot the loss vs epoch (if desired)
         if args.plot_loss is not None:
-            plot_error = True if (not args.n_epochs > 200) else False
+            plot_error = True if (not args.n_epochs > 50) else False
             from synthit import plot_loss
             ax = plot_loss(train_losses, ecolor='maroon', label='Train', plot_error=plot_error)
             _ = plot_loss(validation_losses, filename=args.plot_loss, ecolor='firebrick', ax=ax, label='Validation', plot_error=plot_error)

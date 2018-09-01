@@ -50,7 +50,7 @@ def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int
     avg_losses = np.array([np.mean(losses) for losses in all_losses]) * (10 ** scale)
     if plot_error:
         std_losses = np.array([np.std(losses) for losses in all_losses]) * (10 ** scale)
-        ax.errorbar(np.arange(1,len(avg_losses)+1), avg_losses, yerr=std_losses, ecolor=ecolor, lw=3, fmt='none')
+        ax.errorbar(np.arange(1,len(avg_losses)+1), avg_losses, yerr=std_losses, ecolor=ecolor, lw=3, fmt='none', alpha=0.5)
     ax.plot(np.arange(1,len(avg_losses)+1), avg_losses, lw=3, label=label)
     ax.set_title('Loss vs Epoch')
     ax.set_ylabel('Loss')
