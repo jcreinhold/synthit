@@ -27,7 +27,7 @@ except ImportError:
     logger.info('Seaborn not installed, so plots will not be as pretty. :-(')
 
 
-def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int=1, ecolor: str='red',
+def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int=0, ecolor: str='red',
               filename: Optional[str]=None, ax: Optional=None, label: str='', plot_error: bool=True):
     """
     plot loss vs epoch for a given list (of lists) of loss values

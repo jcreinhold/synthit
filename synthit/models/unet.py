@@ -16,7 +16,7 @@ Created on: Aug 27, 2018
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import torch
 from torch import nn
@@ -51,11 +51,11 @@ class Unet(torch.nn.Module):
         self.down_layers = nn.ModuleList([self.__dbl_conv_act(lc(n), lc(n), lc(n + 1))
                                           for n in range(1, n_layers)])
         self.bridge = self.__dbl_conv_act(lc(n_layers), lc(n_layers), lc(n_layers + 1))
-        self.up_layers = nn.ModuleList([self.__dbl_conv_act(lc(n) + lc(n - 1), lc(n - 1), lc(n - 1))
+        self.up_layers = nn.ModuleList([self.__dbl_conv_act(lc(n) + lc(n - 1), lc(n - 1), lc(n - 1), (kernel_sz+2, kernel_sz))
                                         for n in reversed(range(3, n_layers + 2))])
         self.up_conv = nn.ModuleList([self.__conv(lc(n), lc(n))
                                       for n in reversed(range(2, n_layers + 2))])
-        self.finish = self.__dbl_conv_act(lc(2) + lc(1), lc(1), 1, (None, 1))
+        self.finish = self.__dbl_conv_act(lc(2) + lc(1), lc(1), 1, (None, 1), (None, nn.LeakyReLU(1)))  # hack to get linear output
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.start(x)
@@ -78,18 +78,23 @@ class Unet(torch.nn.Module):
             nn.Conv3d(in_c, out_c, ksz))
         return c
 
-    def __conv_act(self, in_c: int, out_c: int, kernel_sz: Optional[int]=None) -> nn.Sequential:
+    def __conv_act(self, in_c: int, out_c: int, kernel_sz: Optional[int]=None,
+                   act: Optional[Callable]=None, norm: Optional[Callable]=None) -> nn.Sequential:
         ksz = self.kernel_sz if kernel_sz is None else kernel_sz
+        activation = nn.ReLU() if act is None else act
+        normalization = nn.InstanceNorm3d(out_c, affine=True) if norm is None else norm
         ca = nn.Sequential(
             self.__conv(in_c, out_c, ksz),
-            nn.ReLU(),
-            nn.InstanceNorm3d(out_c, affine=True),
+            activation,
+            normalization,
             nn.Dropout3d(self.dropout_p))
         return ca
 
     def __dbl_conv_act(self, in_c: int, mid_c: int, out_c: int,
-                       kernel_sz: Tuple[Optional[int],Optional[int]]=(None,None)) -> nn.Sequential:
+                       kernel_sz: Tuple[Optional[int],Optional[int]]=(None,None),
+                       act: Tuple[Optional[Callable], Optional[Callable]]=(None,None),
+                       norm: Tuple[Optional[Callable], Optional[Callable]]=(None,None)) -> nn.Sequential:
         dca = nn.Sequential(
-            self.__conv_act(in_c, mid_c, kernel_sz[0]),
-            self.__conv_act(mid_c, out_c, kernel_sz[1]))
+            self.__conv_act(in_c, mid_c, kernel_sz[0], act[0], norm[0]),
+            self.__conv_act(mid_c, out_c, kernel_sz[1], act[1], norm[1]))
         return dca
