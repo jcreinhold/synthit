@@ -26,7 +26,7 @@ with warnings.catch_warnings():
 
 
 def arg_parser():
-    parser = argparse.ArgumentParser(description='train a CNN for MR image synthesis')
+    parser = argparse.ArgumentParser(description='predict an MR image from a trained neural net')
 
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True,

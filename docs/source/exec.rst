@@ -25,7 +25,7 @@ Neural Network Trainer
    :func: arg_parser
    :prog: nn-train
 
-Neural Network Trainer
+Neural Network Predictor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. argparse::
