@@ -23,7 +23,7 @@ from ..util.io import glob_nii, split_filename
 logger = logging.getLogger(__name__)
 
 
-def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png', ortho=True, trim=True):
+def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png', slices=None, trim=True, scale=False):
     """
     create images for a directory of nifti files
 
@@ -33,7 +33,7 @@ def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png',
         labels (str): path to directory of corresponding labels (not needed)
         figsize (float): size of output image
         outtype (str): type of file to output (e.g., png, pdf, etc.)
-        ortho (bool): plot ortho view vs slices
+        slices (tuple): plot these slices in axial view (instead of ortho)
         trim (bool): trim blank/white space from image (need to have imagemagick installed)
 
     Returns:
@@ -54,12 +54,13 @@ def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png',
         img = ants.image_read(img_fn)
         label = None if label_fn is None else ants.image_read(label_fn)
         out_fn = os.path.join(out_dir, base + '.' + outtype)
-        if ortho:
+        if slices is None:
             ants.plot_ortho(img, overlay=label, overlay_cmap='prism', overlay_alpha=0.3,
                             flat=True, figsize=figsize, orient_labels=False, xyz_lines=False,
                             filename=out_fn)
         else:
-            ants.plot(img, figsize=figsize, filename=out_fn)
+            ants.plot(img.reorient_image2('ILP'), figsize=figsize, filename=out_fn, slices=slices,
+                      reorient=False, scale=scale)
     if trim:
         logger.info('trimming blank space from all views')
         from subprocess import call

@@ -12,6 +12,7 @@ Created on: Jun 20, 2018
 
 import argparse
 import logging
+import os
 import sys
 import warnings
 
@@ -38,10 +39,13 @@ def arg_parser():
                          help='path to output the trained regressor')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
-    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr'),
+    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr', 'br'),
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
+    options.add_argument('--cross-validate', action='store_true', default=False,
+                         help='do leave one out cross-validation on the provided dataset (e.g., if 5 datasets are '
+                              'provided, then 5 models are trained where all the data are used except one).')
 
     synth_options = parser.add_argument_group('Synthesis Options')
     synth_options.add_argument('--patch-size', type=int, default=3,
@@ -112,14 +116,17 @@ def main():
             regr = LinearRegression(n_jobs=args.n_jobs, fit_intercept=True if args.poly_deg is None else False)
             flatten = False
         elif args.regr_type == 'mlr':
-            from ..util.mlr import LinearRegressionMixture
+            from synthit.models.mlr import LinearRegressionMixture
             regr = LinearRegressionMixture(3, num_restarts=args.num_restarts, num_workers=args.n_jobs,
-                                           max_iterations=args.max_iterations, threshold=args.threshold,
-                                           )
+                                           max_iterations=args.max_iterations, threshold=args.threshold)
             args.poly_deg = 1 if args.poly_deg is None else args.poly_deg  # hack to get bias term included in features
             flatten = True
+        elif args.regr_type == 'br':
+            from synthit.models.br import BayesianRegression
+            regr = BayesianRegression()
+            flatten = False
         else:
-            raise SynthError('Invalid regressor type: {}. rf, xg, pr, and mlr are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, br}} are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
                         args.mean, args.full_patch, flatten, args.use_xyz)
@@ -135,10 +142,24 @@ def main():
             target = [tgt * mask for (tgt, mask) in zip(target, masks)]
         else:
             masks = [None] * len(target)
-        ps.fit(source, target, masks)
-        outfile = 'trained_model.pkl' if args.output is None else args.output
-        logger.info('Saving trained model: {}'.format(outfile))
-        joblib.dump(ps, outfile)
+        if not args.cross_validate:
+            ps.fit(source, target, masks)
+            outfile = 'trained_model.pkl' if args.output is None else args.output
+            logger.info('Saving trained model: {}'.format(outfile))
+            joblib.dump(ps, outfile)
+        else:
+            for i in range(len(target)):
+                src = [[src_ for k, src_ in enumerate(source_) if i != k] for source_ in source]
+                tgt = [tgt_ for k, tgt_ in enumerate(target) if i != k]
+                msk = [msk_ for k, msk_ in enumerate(masks) if i != k]
+                ps.fit(src, tgt, msk)
+                if args.output is not None:
+                    name, ext = os.path.splitext(args.output)
+                    outfile = name + '_{}'.format(i) + ext
+                else:
+                    outfile = 'trained_model_{}.pkl'.format(i)
+                logger.info('Saving trained model: {}'.format(outfile))
+                joblib.dump(ps, outfile)
         return 0
     except Exception as e:
         logger.exception(e)

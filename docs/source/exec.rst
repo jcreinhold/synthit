@@ -17,6 +17,22 @@ Synthesis Predictor
    :func: arg_parser
    :prog: synth-predict
 
+Neural Network Trainer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. argparse::
+   :module: synthit.exec.nn_train
+   :func: arg_parser
+   :prog: nn-train
+
+Neural Network Predictor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. argparse::
+   :module: synthit.exec.nn_predict
+   :func: arg_parser
+   :prog: nn-predict
+
 Synthesis Quality
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

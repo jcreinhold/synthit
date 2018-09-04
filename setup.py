@@ -30,7 +30,7 @@ else:
 
 args = dict(
     name='synthit',
-    version='0.0.0',
+    version='0.0.1',
     description="Synthesize MR neuro images",
     long_description=readme,
     author='Jacob Reinhold',
@@ -41,6 +41,8 @@ args = dict(
     entry_points = {
         'console_scripts': ['directory-view=synthit.exec.directory_view:main',
                             'synth-quality=synthit.exec.synth_quality:main',
+                            'nn-train=synthit.exec.nn_train:main',
+                            'nn-predict=synthit.exec.nn_predict:main',
                             'synth-train=synthit.exec.synth_train:main',
                             'synth-predict=synthit.exec.synth_predict:main',]
     },
@@ -54,4 +56,5 @@ setup(install_requires=['antspy',
                         'scikit-learn',
                         'scikit-image',
                         'scipy',
+                        'torch',
                         'xgboost'], **args)
