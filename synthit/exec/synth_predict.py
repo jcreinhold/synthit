@@ -17,11 +17,11 @@ import os
 import sys
 import warnings
 
-import ants
-from sklearn.externals import joblib
-
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
+    import ants
+    from sklearn.externals import joblib
     from synthit import split_filename, glob_nii, SynthError
 
 

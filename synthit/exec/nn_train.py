@@ -16,10 +16,10 @@ import logging
 import sys
 import warnings
 
-import numpy as np
-
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
+    import numpy as np
     import torch
     from torch import nn
     from torch.utils.data import DataLoader

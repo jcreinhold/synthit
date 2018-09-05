@@ -1,0 +1,12 @@
+matplotlib
+numpy
+pillow
+pyro-ppl
+scikit-learn
+scikit-image
+scipy
+seaborn
+torch
+torchvision
+xgboost
+webcolors

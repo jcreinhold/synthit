@@ -17,6 +17,7 @@ import warnings
 
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
     from synthit import directory_view
 
 

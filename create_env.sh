@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #
+# creates a conda environment called synthit which can run this package
 # use the following command to run this script: . ./create_env.sh
 #
 # Created on: Sep 4, 2018
@@ -19,52 +20,54 @@ conda update -n base conda --yes || return
 
 packages=(
     coverage
-    matplotlib
+    matplotlib==2.2.2
     nose
-    numpy
-    pillow
-    scikit-learn
-    scikit-image
-    scipy
-    seaborn
+    numpy==1.15.1
+    pandas==0.23.4
+    pillow==5.2.0
+    scikit-learn==0.19.2
+    scikit-image==0.14.0
+    scipy==1.1.0
     sphinx
-    vtk
+    vtk==8.1.1
 )
 
 conda_forge_packages=(
-    itk
-    libiconv
-    nibabel
-    plotly
     sphinx-argparse
-    statsmodels
-    webcolors
-    xgboost
+    itk==4.13.1
+    libiconv
+    nibabel==2.3.0
+    webcolors==1.8.1
+    xgboost==0.72.1
 )
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    pytorch_packages=(pytorch-cpu torchvision-cpu)
+    pytorch_packages=(pytorch-cpu==0.4.1 torchvision-cpu==0.2.1)
 else
-    pytorch_packages=(pytorch torchvision)
+    pytorch_packages=(pytorch==0.4.1 torchvision==0.2.1)
 fi
 
-# set conda to use the latest (compatible) versions
-conda config --set channel_priority false
-conda config --add channels conda-forge 
+# set conda to pull packages from specific repositories
+conda config --add channels conda-forge
 conda config --add channels pytorch
 
 # create the environment and switch to that environment
-conda create --name synthit ${packages[@]} ${conda_forge_packages[@]} --yes || return
+conda create --name synthit ${packages[@]} ${conda_forge_packages[@]} ${pytorch_packages[@]} --yes || return
 source activate synthit || return
 
 # install a few packages not found through conda
-pip install -U --no-deps pyro-ppl
+pip install -U --no-deps pyro-ppl==0.2.1
 
 # install ANTsPy
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     pip install https://github.com/ANTsX/ANTsPy/releases/download/v0.1.4/antspy-0.1.4-cp36-cp36m-linux_x86_64.whl
 else
-    pip install https://github.com/ANTsX/ANTsPy/releases/download/Weekly/antspy-0.1.4-cp36-cp36m-macosx_10_7_x86_64.whl
+    # the wheel for OS X appears to be broken, need to build from source
+    git clone https://github.com/ANTsX/ANTsPy.git
+    cd ANTsPy
+    git checkout v0.1.5
+    python setup.py develop
+    cd ..
 fi
 
 # now finally install the intensity-normalization package

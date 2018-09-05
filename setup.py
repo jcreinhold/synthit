@@ -30,7 +30,7 @@ else:
 
 args = dict(
     name='synthit',
-    version='0.0.1',
+    version='0.1.0',
     description="Synthesize MR neuro images",
     long_description=readme,
     author='Jacob Reinhold',
@@ -57,4 +57,5 @@ setup(install_requires=['antspy',
                         'scikit-image',
                         'scipy',
                         'torch',
+                        'torchvision',
                         'xgboost'], **args)

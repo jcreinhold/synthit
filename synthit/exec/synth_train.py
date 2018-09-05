@@ -16,11 +16,11 @@ import os
 import sys
 import warnings
 
-import numpy as np
-from sklearn.externals import joblib
-
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
+    import numpy as np
+    from sklearn.externals import joblib
     from synthit import PatchSynth, SynthError
 
 

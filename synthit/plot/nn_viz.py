@@ -28,7 +28,7 @@ except ImportError:
 
 
 def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int=0, ecolor: str='red',
-              filename: Optional[str]=None, ax: Optional=None, label: str='', plot_error: bool=True):
+              filename: Optional[str]=None, ax: Optional[object]=None, label: str='', plot_error: bool=True):
     """
     plot loss vs epoch for a given list (of lists) of loss values
 
