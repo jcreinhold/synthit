@@ -57,8 +57,6 @@ def plot_loss(all_losses: List[list], figsize: Tuple[int,int]=(14,7), scale: int
     ax.set_xlabel('Epoch')
     if ax is not None:
         plt.legend()
-    #ax.set_xlim((1, len(avg_losses)))
-    #ax.set_ylim((0, np.max(avg_losses) + (np.max(avg_losses) / 10)))
     if filename is not None:
         plt.savefig(filename)
     return ax

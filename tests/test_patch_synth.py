@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-tests.test_utilities
+tests.test_patch_synth
 
-test the functions located in util submodule for runtime errors
+test patch-based synthesis functions for common runtime errors
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 
@@ -18,7 +18,8 @@ from sklearn.linear_model import LinearRegression
 
 from synthit import PatchSynth
 
-class TestUtilities(unittest.TestCase):
+
+class TestPatchSynth(unittest.TestCase):
 
     def setUp(self):
         wd = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +45,13 @@ class TestUtilities(unittest.TestCase):
        ps = PatchSynth(self.regr, patch_size=0, n_samples=10, context_radius=(1,), flatten=False)
        ps.fit([[self.img]], [self.img], [self.mask])
        _ = ps.predict([self.img], self.mask)
+
+    def test_patch_mlr(self):
+        from synthit.models.mlr import LinearRegressionMixture
+        regr = LinearRegressionMixture(3, num_restarts=2, num_workers=1, max_iterations=1)
+        ps = PatchSynth(regr, n_samples=10, flatten=True)
+        ps.fit([[self.img]], [self.img], [self.mask])
+        _ = ps.predict([self.img], self.mask)
 
     def tearDown(self):
         del self.img, self.mask

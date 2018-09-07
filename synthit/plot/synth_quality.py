@@ -34,8 +34,31 @@ except ImportError:
     logger.info('Seaborn not installed, so plots will not be as pretty. :-(')
 
 
-def plot_synth_quality_bar(synth_dirs, truth_dirs, norm_algs, synth_algs, out_dir=None, mask_dir=None, outtype='png'):
+def plot_synth_quality_bar(synth_dirs, truth_dirs, norm_algs, synth_algs, out_dir=None, mask_dir=None, outtype='png'): # pragma: no cover
+    """
+    Generate a fairly specific plot pertaining to the three quality metrics and their relative performance given
+    multiple different normalization and synthesis algorithms
+
+    There is probably not a good reason for a user (other than the author) to try to use this function
+
+    Args:
+        synth_dirs (list): list of directories (strings) each containing N images corresponding
+            to the N images in truth_dirs
+        truth_dirs (list): list of directories containing the corresponing true images
+        norm_algs (list): list of normalization algorithms under consideration
+            (must equal number of directories under each synth_dir)
+        synth_algs (list): synthesis algorithms under consideration
+            (must equal number of directories provided in the synth_dirs argument)
+        out_dir (str): directory in which to output the generated figure
+        mask_dir (str): directory holding the masks for the images in each of the synth_dir and truth_dir
+        outtype (str): output image type (e.g., pdf, png, etc.)
+
+    Returns:
+        data (pd.DataFrame): pandas dataframe holding tabulated information regarding all
+             quality tests run in this function
+    """
     import pandas as pd
+    from distutils.version import LooseVersion
     truth_dirs_ = sorted([dir_ for root, dir_, _ in os.walk(truth_dirs) if len(dir_) > 0][0])
     truth_dirs_ = [os.path.join(truth_dirs, dir_) for dir_ in truth_dirs_]
     if len(synth_algs) != len(synth_dirs) or len(norm_algs) != len(truth_dirs_):
@@ -73,7 +96,7 @@ def plot_synth_quality_bar(synth_dirs, truth_dirs, norm_algs, synth_algs, out_di
                               "Normalization Algorithm": norm_alg,
                               "Synthesis Algorithm": synth_alg})
     data.to_csv('data.csv')
-    if sns.__version__ == '0.9.0':
+    if LooseVersion(sns.__version__) >= LooseVersion('0.9.0'):
         _ = sns.catplot(x="Normalization Algorithm", y="Value",
                         hue="Synthesis Algorithm", col="Metric",
                         data=data, kind="bar")
@@ -148,7 +171,7 @@ def plot_synth_quality(synth, truth, mask, mean=False):
         ax (matplotlib ax object): ax that the plot was created on
     """
     if not mean:
-        stats, metrics = synth_quality(synth.numpy(), truth.numpy(), mask.numpy())
+        stats, metrics = synth_quality(synth.numpy(), truth.numpy(), mask.numpy() if mask is not None else None)
         ax = __radar_plot(metrics, stats)
         area = quality_simplex_area(stats)
         title = 'Synthesis Quality Simplex'
@@ -159,7 +182,7 @@ def plot_synth_quality(synth, truth, mask, mean=False):
         all_stats = np.zeros((len(synth), 3))
         for i, (synth_, truth_, mask_) in enumerate(zip(synth, truth, mask)):
             logger.info('Calculating image quality metrics ({:d}/{:d})'.format(i+1, len(synth)))
-            stats_, metrics = synth_quality(synth_.numpy(), truth_.numpy(), mask_.numpy())
+            stats_, metrics = synth_quality(synth_.numpy(), truth_.numpy(), mask_.numpy() if mask_ is not None else None)
             all_stats[i, :] += np.array(stats_)
         mean_stats = all_stats.mean(0)
         std_stats = all_stats.std(0)

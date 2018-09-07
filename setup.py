@@ -24,14 +24,19 @@ with open('LICENSE') as f:
 if platform == "linux" or platform == "linux32":
     antspy = "https://github.com/ANTsX/ANTsPy/releases/download/v0.1.4/antspy-0.1.4-cp36-cp36m-linux_x86_64.whl"
 elif platform == "darwin":
-    antspy = "https://github.com/ANTsX/ANTsPy/releases/download/Weekly/antspy-0.1.4-cp36-cp36m-macosx_10_7_x86_64.whl"
+    try:
+        import ants
+        antspy = ""
+    except ImportError:
+        raise Exception('On OS X you need to build ANTsPy from source before installing the synthit package. '
+                        'See the "install ANTsPy" section of create_env.sh for the necessary commands.')
 else:
     raise Exception('synthit package only supports linux and OS X')
 
 args = dict(
     name='synthit',
     version='0.1.0',
-    description="Synthesize MR neuro images",
+    description="Synthesize MR and CT brain images",
     long_description=readme,
     author='Jacob Reinhold',
     author_email='jacob.reinhold@jhu.edu',

@@ -54,13 +54,19 @@ def directory_view(img_dir, out_dir=None, labels=None, figsize=3, outtype='png',
         img = ants.image_read(img_fn)
         label = None if label_fn is None else ants.image_read(label_fn)
         out_fn = os.path.join(out_dir, base + '.' + outtype)
-        if slices is None:
+        if slices is None and hasattr(ants, 'plot_ortho'):
             ants.plot_ortho(img, overlay=label, overlay_cmap='prism', overlay_alpha=0.3,
                             flat=True, figsize=figsize, orient_labels=False, xyz_lines=False,
                             filename=out_fn)
         else:
-            ants.plot(img.reorient_image2('ILP'), figsize=figsize, filename=out_fn, slices=slices,
-                      reorient=False, scale=scale)
+            img = img.reorient_image2('ILP') if hasattr(img, 'reorient_image2') else img
+            try:
+                ants.plot(img, figsize=figsize, filename=out_fn, slices=slices,
+                          reorient=False, scale=scale)
+            except TypeError:
+                import matplotlib.pyplot as plt
+                ants.plot(img)
+                plt.savefig(out_fn)
     if trim:
         logger.info('trimming blank space from all views')
         from subprocess import call

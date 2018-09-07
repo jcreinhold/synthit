@@ -33,6 +33,10 @@ class Unet(torch.nn.Module):
         n_layers (int): number of layers (to go down and up)
         kernel_sz (int): size of kernel (symmetric)
         dropout_p (int): dropout probability for each layer
+        patch_sz (int): dimension of one side of a cube (i.e., extracted "patch" is a patch_sz^3 size 3d-array)
+        channel_base_power (int): 2 ** channel_base_power is the number of channels in the first layer
+            and increases in each proceeding layer such that in the n-th layer there are
+            2 ** channel_base_power + n channels (this follows the convention in [1])
 
     References:
     [1] O. Cicek, A. Abdulkadir, S. S. Lienkamp, T. Brox, and O. Ronneberger,
@@ -40,13 +44,14 @@ class Unet(torch.nn.Module):
         in Medical Image Computing and Computer-Assisted Intervention (MICCAI), 2016, pp. 424–432.
 
     """
-    def __init__(self, n_layers: int, kernel_sz: int=3, dropout_p: float=0, patch_sz: int=64):
+    def __init__(self, n_layers: int, kernel_sz: int=3, dropout_p: float=0, patch_sz: int=64, channel_base_power: int=5):
         super(Unet, self).__init__()
         self.n_layers = n_layers
         self.kernel_sz = kernel_sz
         self.dropout_p = dropout_p
         self.patch_sz = patch_sz
-        def lc(n): return int(2 ** (5 + n))  # shortcut to layer count
+        self.channel_base_power = channel_base_power
+        def lc(n): return int(2 ** (channel_base_power + n))  # shortcut to layer count
         self.start = self.__dbl_conv_act(1, lc(0), lc(1))
         self.down_layers = nn.ModuleList([self.__dbl_conv_act(lc(n), lc(n), lc(n + 1))
                                           for n in range(1, n_layers)])
@@ -55,7 +60,7 @@ class Unet(torch.nn.Module):
                                         for n in reversed(range(3, n_layers + 2))])
         self.up_conv = nn.ModuleList([self.__conv(lc(n), lc(n))
                                       for n in reversed(range(2, n_layers + 2))])
-        self.finish = self.__dbl_conv_act(lc(2) + lc(1), lc(1), 1, (None, 1), (None, nn.LeakyReLU(1)))  # hack to get linear output
+        self.finish = self.__dbl_conv_act(lc(2) + lc(1), lc(1), 1, (None, 1), (None, nn.LeakyReLU(1, inplace=True)))  # hack to get linear output
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.start(x)
@@ -81,17 +86,17 @@ class Unet(torch.nn.Module):
     def __conv_act(self, in_c: int, out_c: int, kernel_sz: Optional[int]=None,
                    act: Optional[Callable]=None, norm: Optional[Callable]=None) -> nn.Sequential:
         ksz = self.kernel_sz if kernel_sz is None else kernel_sz
-        activation = nn.ReLU() if act is None else act
+        activation = nn.ReLU(inplace=True) if act is None else act
         normalization = nn.InstanceNorm3d(out_c, affine=True) if norm is None else norm
         ca = nn.Sequential(
             self.__conv(in_c, out_c, ksz),
             activation,
             normalization,
-            nn.Dropout3d(self.dropout_p))
+            nn.Dropout3d(self.dropout_p, inplace=True))
         return ca
 
     def __dbl_conv_act(self, in_c: int, mid_c: int, out_c: int,
-                       kernel_sz: Tuple[Optional[int],Optional[int]]=(None,None),
+                       kernel_sz: Tuple[Optional[int], Optional[int]]=(None,None),
                        act: Tuple[Optional[Callable], Optional[Callable]]=(None,None),
                        norm: Tuple[Optional[Callable], Optional[Callable]]=(None,None)) -> nn.Sequential:
         dca = nn.Sequential(

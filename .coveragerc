@@ -1,0 +1,5 @@
+[report]
+omit =
+    */synthit/models/br.py
+    */synthit/exec/directory_view.py
+    */synthit/plot/directory_view.py

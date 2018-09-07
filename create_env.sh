@@ -33,10 +33,10 @@ packages=(
 )
 
 conda_forge_packages=(
-    sphinx-argparse
     itk==4.13.1
     libiconv
     nibabel==2.3.0
+    sphinx-argparse
     webcolors==1.8.1
     xgboost==0.72.1
 )
@@ -52,7 +52,7 @@ conda config --add channels conda-forge
 conda config --add channels pytorch
 
 # create the environment and switch to that environment
-conda create --name synthit ${packages[@]} ${conda_forge_packages[@]} ${pytorch_packages[@]} --yes || return
+conda create --name synthit python==3.6.6 ${packages[@]} ${conda_forge_packages[@]} ${pytorch_packages[@]} --yes || return
 source activate synthit || return
 
 # install a few packages not found through conda

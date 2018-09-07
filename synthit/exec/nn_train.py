@@ -74,8 +74,8 @@ def arg_parser():
     return parser
 
 
-def main():
-    args = arg_parser().parse_args()
+def main(args=None):
+    args = arg_parser().parse_args(args)
     if args.verbosity == 1:
         level = logging.getLevelName('INFO')
     elif args.verbosity >= 2:
@@ -86,7 +86,6 @@ def main():
     logger = logging.getLogger(__name__)
     try:
         # set torch to use cuda if available (and desired) and set number of threads (TODO: verify set_num_threads works as expected)
-        device = torch.device("cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu")
         torch.set_num_threads(args.n_jobs)
 
         # get the desired neural network architecture
@@ -104,7 +103,7 @@ def main():
         crop = RandomCrop(args.patch_size) if args.patch_size > 0 else None
 
         # define dataset and split into training/validation set
-        dataset = NiftiImageDataset(args.source_dir, args.target_dir, crop=crop, device=device)
+        dataset = NiftiImageDataset(args.source_dir, args.target_dir, crop=crop, disable_cuda=args.disable_cuda)
 
         num_train = len(dataset)
         indices = list(range(num_train))
@@ -171,4 +170,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

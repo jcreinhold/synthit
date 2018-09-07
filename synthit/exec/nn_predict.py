@@ -54,8 +54,8 @@ def arg_parser():
     return parser
 
 
-def main():
-    args = arg_parser().parse_args()
+def main(args=None):
+    args = arg_parser().parse_args(args)
     if args.verbosity == 1:
         level = logging.getLevelName('INFO')
     elif args.verbosity >= 2:
@@ -78,7 +78,7 @@ def main():
         source_fns = glob_nii(args.source_dir)
         for k, fn in enumerate(source_fns):
             img_ants = ants.image_read(fn)
-            img = img_ants.numpy()
+            img = img_ants.numpy().view(np.float32)  # set to float32 to save memory
             if psz > 0:
                 out_img = np.zeros(img.shape)
                 count_mtx = np.zeros(img.shape)
@@ -95,17 +95,17 @@ def main():
                     if i in dec_idxs:
                         logger.info(f'{count}% Complete')
                         count += 5
-                    patch = torch.from_numpy(img[xx, yy, zz]).to(device, dtype=torch.float32)[None, None, ...]
+                    patch = torch.from_numpy(img[xx, yy, zz]).to(device)[None, None, ...]
                     predicted = np.squeeze(model.forward(patch).data.numpy())
                     out_img[xx, yy, zz] = out_img[xx, yy, zz] + predicted
                     count_mtx[xx, yy, zz] = count_mtx[xx, yy, zz] + 1
                 count_mtx[count_mtx == 0] = 1  # avoid division by zero
                 out_img_ants = img_ants.new_image_like(out_img / count_mtx)
             else:
-                test_img_t = torch.from_numpy(img).to(device, dtype=torch.float32)[None, None, ...]
+                test_img_t = torch.from_numpy(img).to(device)[None, None, ...]
                 out_img = np.squeeze(model.forward(test_img_t).data.numpy())
                 out_img_ants = img_ants.new_image_like(out_img)
-            out_img_ants.to_filename(args.output + str(k) + '.nii.gz')
+            out_img_ants.to_file(args.output + str(k) + '.nii.gz')
 
         return 0
     except Exception as e:
@@ -114,4 +114,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

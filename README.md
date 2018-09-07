@@ -7,7 +7,7 @@ synthit
 [![Docker Automated Build](https://img.shields.io/docker/build/jcreinhold/synthit.svg)](https://hub.docker.com/r/jcreinhold/synthit/)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
-This package contains code to *synthesize* magnetic resonance (MR) and computed tomography (CT) brain images. Synthesis is the procedure 
+This package contains code to synthesize magnetic resonance (MR) and computed tomography (CT) brain images. Synthesis is the procedure 
 of learning the transformation that takes a specific contrast image to another estimate contrast.
 
 For example, given a set of T1-weighted (T1-w) and T2-weighted (T2-w) images, we can learn the function that maps the intensities of the
@@ -45,13 +45,24 @@ or (if you actively want to make changes to the package)
 
     python setup.py develop
 
+Singularity
+-----------
+
+You can build a singularity image from the docker image hosted on dockerhub via the following command:
+
+    singularity pull --name synthit.simg docker://jcreinhold/synthit
+    
 Test Package
 ------------
 
 Unit tests can be run from the main directory as follows:
 
     nosetests -v --with-coverage --cover-tests --cover-package=synthit tests
-    
+  
+If you are using docker, then the equivalent command will be (depending on how the image was built):
+
+    docker run jcreinhold/synthit /bin/bash -c "pip install nose && nosetests -v tests/"
+
 Relevant Papers
 ---------------
 

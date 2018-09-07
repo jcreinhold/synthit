@@ -56,11 +56,11 @@ def process(ps, img_fn, mask_fn, k, n, logger, args):
     synth = ps.predict(img, mask)
     out_fn = os.path.join(dirpath if args.output_dir is None else args.output_dir, base + '_syn.nii.gz')
     logger.info('Saving image: {}'.format(out_fn))
-    synth.to_filename(out_fn)
+    synth.to_file(out_fn)
 
 
-def main():
-    args = arg_parser().parse_args()
+def main(args=None):
+    args = arg_parser().parse_args(args)
     if args.verbosity == 1:
         level = logging.getLevelName('INFO')
     elif args.verbosity >= 2:
@@ -101,4 +101,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
