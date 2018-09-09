@@ -39,7 +39,7 @@ def arg_parser():
                          help='path to output the trained regressor')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
-    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr', 'br'),
+    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr', 'br', 'mlp'),
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
@@ -81,7 +81,9 @@ def arg_parser():
     regr_options.add_argument('--num-restarts', type=int, default=8,
                               help='number of restarts for mlr (since finds local optimum) [Default=8]')
     regr_options.add_argument('--max-iterations', type=int, default=20,
-                              help='maximum number of iterations for mlr [Default=20]')
+                              help='maximum number of iterations for mlr and mlp [Default=20]')
+    regr_options.add_argument('--hidden-layer-sizes', type=int, nargs='+', default=(100,),
+                              help='number of neurons in each hidden layer for mlp [Default=(100,)]')
     regr_options.add_argument('--random-seed', default=0,
                               help='set random seed for reproducibility [Default=0]')
     return parser
@@ -125,8 +127,13 @@ def main(args=None):
             from synthit.models.br import BayesianRegression
             regr = BayesianRegression()
             flatten = False
+        elif args.regr_type == 'mlp':
+            from sklearn.neural_network import MLPRegressor
+            regr = MLPRegressor(hidden_layer_sizes=args.hidden_layer_sizes, max_iter=args.max_iterations,
+                                random_state=args.random_seed, verbose=True if args.verbosity >= 2 else False)
+            flatten = True
         else:
-            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, br}} are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, br, mlp}} are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
                         args.mean, args.full_patch, flatten, args.use_xyz)
