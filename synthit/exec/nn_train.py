@@ -53,8 +53,8 @@ def arg_parser():
                                help='patch size^3 extracted from image [Default=64]')
 
     nn_options = parser.add_argument_group('Neural Network Options')
-    nn_options.add_argument('-n', '--n-jobs', type=int, default=4,
-                            help='number of processors to use [Default=4]')
+    nn_options.add_argument('-n', '--n-jobs', type=int, default=0,
+                            help='number of CPU processors to use (use 0 if CUDA enabled) [Default=0]')
     nn_options.add_argument('-ne', '--n-epochs', type=int, default=100,
                             help='number of epochs [Default=100]')
     nn_options.add_argument('-nl', '--n-layers', type=int, default=3,
@@ -85,7 +85,7 @@ def main(args=None):
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        # set torch to use cuda if available (and desired) and set number of threads (TODO: verify set_num_threads works as expected)
+        # set number of threads if using CPU
         torch.set_num_threads(args.n_jobs)
 
         # get the desired neural network architecture
@@ -98,6 +98,10 @@ def main(args=None):
         else:
             raise SynthError(f'Invalid NN type: {args.nn_arch}. {{nconv, unet}} are the only supported options.')
         logger.debug(model)
+
+        # put the model on the GPU if available and desired
+        if torch.cuda.is_available() and not args.disable_cuda:
+            model.cuda()
 
         # control random cropping patch size (or if used at all)
         crop = RandomCrop(args.patch_size) if args.patch_size > 0 else None

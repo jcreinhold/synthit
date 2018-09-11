@@ -43,8 +43,8 @@ def arg_parser():
                          help="increase output verbosity (e.g., -vv is more than -v)")
 
     nn_options = parser.add_argument_group('Neural Network Options')
-    nn_options.add_argument('-n', '--n-jobs', type=int, default=4,
-                            help='number of processors to use [Default=4]')
+    nn_options.add_argument('-n', '--n-jobs', type=int, default=0,
+                            help='number of processors to use on CPU (use zero if CUDA enabled) [Default=0]')
     nn_options.add_argument('-bs', '--batch-size', type=int, default=5,
                               help='batch size (num of images to process at once) [Default=5]')
     nn_options.add_argument('--random-seed', default=0,
@@ -72,6 +72,7 @@ def main(args=None):
         # load the trained model
         model = torch.load(args.trained_model)
         logger.debug(model)
+        model = model.to(device)
 
         # set convenience variables and grab filenames of images to synthesize
         psz = model.patch_sz
