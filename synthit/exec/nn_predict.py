@@ -65,14 +65,14 @@ def main(args=None):
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
-        # set torch to use cuda if available (and desired) and set number of threads (TODO: verify set_num_threads works as expected)
-        device = torch.device("cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu")
+        # set torch to use cuda if available (and desired) and set number of threads for the CPU (if enabled)
+        dev_str = "cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu"
+        device = torch.device(dev_str)
         torch.set_num_threads(args.n_jobs)
 
         # load the trained model
-        model = torch.load(args.trained_model)
+        model = torch.load(args.trained_model, map_location=dev_str)
         logger.debug(model)
-        model = model.to(device)
 
         # set convenience variables and grab filenames of images to synthesize
         psz = model.patch_sz

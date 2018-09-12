@@ -23,17 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 class Conv3dNLayerNet(torch.nn.Module):
-    def __init__(self, n_layers: int, n_channels: int=1, kernel_sz: int=3, dropout_p: float=0, patch_sz: int=64):
+    def __init__(self, n_layers: int, n_channels: int=1, kernel_size: int=3, dropout_p: float=0, patch_size: int=64):
         super(Conv3dNLayerNet, self).__init__()
         self.n_layers = n_layers
         self.n_channels = n_channels
-        self.kernel_sz = kernel_sz
+        self.kernel_sz = kernel_size
         self.dropout_p = dropout_p
-        self.patch_sz = patch_sz
-        if isinstance(kernel_sz, int):
-            self.kernel_sz = [kernel_sz for _ in range(n_layers)]
+        self.patch_sz = patch_size
+        if isinstance(kernel_size, int):
+            self.kernel_sz = [kernel_size for _ in range(n_layers)]
         else:
-            self.kernel_sz = kernel_sz
+            self.kernel_sz = kernel_size
         self.layers = nn.ModuleList([nn.Sequential(
             nn.ReplicationPad3d(ksz//2),
             nn.Conv3d(n_channels, n_channels, ksz),

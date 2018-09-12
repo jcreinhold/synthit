@@ -24,9 +24,11 @@ class TestNNSynth(unittest.TestCase):
         wd = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = os.path.join(wd, 'test_data', 'images')
 
+    @unittest.skip("Not implemented.")
     def test_nn_synth_nconvnet(self):
         pass
 
+    @unittest.skip("Not implemented.")
     def test_nn_synth_unet(self):
         pass
 

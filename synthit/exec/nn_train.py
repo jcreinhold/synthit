@@ -19,6 +19,8 @@ import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
     warnings.filterwarnings('ignore', category=UserWarning)
+    import matplotlib
+    matplotlib.use('agg')  # do not pull in GUI
     import numpy as np
     import torch
     from torch import nn
@@ -91,10 +93,10 @@ def main(args=None):
         # get the desired neural network architecture
         if args.nn_arch == 'nconv':
             from synthit.models.nconvnet import Conv3dNLayerNet
-            model = Conv3dNLayerNet(args.n_layers, kernel_sz=args.kernel_size, dropout_p=args.dropout_prob, patch_sz=args.patch_size)
+            model = Conv3dNLayerNet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size)
         elif args.nn_arch == 'unet':
             from synthit.models.unet import Unet
-            model = Unet(args.n_layers, kernel_sz=args.kernel_size, dropout_p=args.dropout_prob, patch_sz=args.patch_size)
+            model = Unet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size)
         else:
             raise SynthError(f'Invalid NN type: {args.nn_arch}. {{nconv, unet}} are the only supported options.')
         logger.debug(model)

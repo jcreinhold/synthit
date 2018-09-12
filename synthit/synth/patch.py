@@ -3,7 +3,7 @@
 """
 synthit.synth.patch
 
-base class for patch-based synthesis routines
+base class for non-deep-neural-network patch-based synthesis routines
 
 Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 

@@ -1,4 +1,4 @@
-# Use pytorch (gpu-enabled) runtime as a parent image
+# Use official python runtime as a parent image
 FROM python:3.6-stretch
 MAINTAINER Jacob Reinhold, jacob.reinhold@jhu.edu
 

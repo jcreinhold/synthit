@@ -20,7 +20,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .io import glob_nii
+from synthit.util.io import glob_nii
 
 
 class NiftiImageDataset(Dataset):

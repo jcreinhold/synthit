@@ -10,6 +10,8 @@ Author: Jacob Reinhold (jacob.reinhold@jhu.edu)
 Created on: Sep 01, 2018
 """
 
+__all__ = ['histogram_loss']
+
 from typing import Callable
 
 import torch
