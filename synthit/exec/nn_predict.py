@@ -22,22 +22,23 @@ with warnings.catch_warnings():
     import ants
     import numpy as np
     import torch
-    from synthit import glob_nii
+    from synthit import glob_nii, split_filename, SynthError
+    from synthit.util.io import AttrDict
 
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='predict an MR image from a trained neural net')
 
     required = parser.add_argument_group('Required')
-    required.add_argument('-s', '--source-dir', type=str, required=True,
-                          help='path to directory with source images')
+    required.add_argument('-s', '--predict-dir', type=str, required=True,
+                          help='path to directory with source images on which to do prediction/synthesis')
     required.add_argument('-t', '--trained-model', type=str, required=True,
                           help='path to trained model')
 
     options = parser.add_argument_group('Options')
-    options.add_argument('-o', '--output', type=str, default=None,
+    options.add_argument('-o', '--predict-out', type=str, default=None,
                          help='path to output the synthesized image')
-    options.add_argument('-m', '--mask-dir', type=str, default=None,
+    options.add_argument('-m', '--predict-mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
@@ -55,7 +56,13 @@ def arg_parser():
 
 
 def main(args=None):
-    args = arg_parser().parse_args(args)
+    no_config_file = args is not None or (args is None and len(sys.argv[1:]) > 1)
+    if no_config_file:
+        args = arg_parser().parse_args(args)
+    else:
+        import json
+        with open(sys.argv[1:][0], 'r') as f:
+            args = AttrDict(json.load(f))
     if args.verbosity == 1:
         level = logging.getLevelName('INFO')
     elif args.verbosity >= 2:
@@ -71,14 +78,33 @@ def main(args=None):
         torch.set_num_threads(args.n_jobs)
 
         # load the trained model
-        model = torch.load(args.trained_model, map_location=dev_str)
+        if no_config_file:
+            logger.warning('Loading entire serialized model in non-preferred way (without config file)')
+            model = torch.load(args.trained_model, map_location=dev_str)
+        else:
+            if args.nn_arch == 'nconv':
+                from synthit.models.nconvnet import Conv3dNLayerNet
+                model = Conv3dNLayerNet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size)
+            elif args.nn_arch == 'unet':
+                from synthit.models.unet import Unet
+                model = Unet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size,
+                             channel_base_power=args.channel_base_power, add_two_up=args.add_two_up, normalization=args.normalization,
+                             activation=args.activation, output_activation=args.out_activation, use_up_conv=args.use_up_conv)
+            else:
+                raise SynthError(f'Invalid NN type: {args.nn_arch}. {{nconv, unet}} are the only supported options.')
+            model.load_state_dict(torch.load(args.trained_model, map_location=dev_str))
         logger.debug(model)
 
         # set convenience variables and grab filenames of images to synthesize
         psz = model.patch_sz
-        source_fns = glob_nii(args.source_dir)
-        for k, fn in enumerate(source_fns):
+        predict_fns = glob_nii(args.predict_dir)
+        for k, fn in enumerate(predict_fns):
+            _, base, _ = split_filename(fn)
+            logger.info(f'Starting synthesis of image: {base}. ({k+1}/{len(predict_fns)})')
             img_ants = ants.image_read(fn)
+            if not no_config_file:
+                if args.crop_mask:
+                    img_ants = ants.crop_image(img_ants, img_ants > 0)
             img = img_ants.numpy().view(np.float32)  # set to float32 to save memory
             if psz > 0:
                 out_img = np.zeros(img.shape)
@@ -106,7 +132,9 @@ def main(args=None):
                 test_img_t = torch.from_numpy(img).to(device)[None, None, ...]
                 out_img = np.squeeze(model.forward(test_img_t).data.numpy())
                 out_img_ants = img_ants.new_image_like(out_img)
-            out_img_ants.to_file(args.output + str(k) + '.nii.gz')
+            out_fn = args.predict_out + str(k) + '.nii.gz'
+            out_img_ants.to_file(out_fn)
+            logger.info(f'Finished synthesis. Saved as: {out_fn}.')
 
         return 0
     except Exception as e:

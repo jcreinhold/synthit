@@ -20,7 +20,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from synthit.util.io import glob_nii
+from ..io import glob_nii
+from ...errors import SynthError
 
 
 class NiftiImageDataset(Dataset):
@@ -36,14 +37,16 @@ class NiftiImageDataset(Dataset):
     """
 
     def __init__(self, source_dir: str, target_dir: str,
-                 crop: Optional[Callable]=None, plot: bool=False, disable_cuda: bool=False):
+                 crop: Optional[Callable]=None, plot: bool=False, disable_cuda: bool=False,
+                 crop_mask: bool=False):
         self.source_dir = source_dir
         self.target_dir = target_dir
         self.source_fns = glob_nii(source_dir)
         self.target_fns = glob_nii(target_dir)
         if len(self.source_fns) != len(self.target_fns):
             raise ValueError('Number of source and target images must be equal')
-        self.crop = crop
+        self.crop = crop if not crop_mask else None  # if crop_mask enabled, do not use crop even if provided
+        self.crop_mask = crop_mask
         self.plot = plot
         self.device = torch.device("cuda" if torch.cuda.is_available() and not disable_cuda else "cpu")
 
@@ -55,6 +58,8 @@ class NiftiImageDataset(Dataset):
         tgt_fn = self.target_fns[idx]
         src_img = ants.image_read(src_fn)
         tgt_img = ants.image_read(tgt_fn)
+        src_img = ants.crop_image(src_img, src_img > 0) if self.crop_mask else src_img
+        tgt_img = ants.crop_image(src_img, src_img > 0) if self.crop_mask else tgt_img
         if src_img.spacing != tgt_img.spacing:
             raise ValueError('Resolution of source and target images need to be equal')
         if self.crop is not None:
@@ -76,8 +81,8 @@ class NiftiImageDataset(Dataset):
                 tgt_img = torch.from_numpy(tgt_t)
         elif self.crop is None and not self.plot:
             # set to float32 to conserve memory
-            src_img = torch.from_numpy(src_img.numpy().view(np.float32))
-            tgt_img = torch.from_numpy(tgt_img.numpy().view(np.float32))
+            src_img = torch.from_numpy(src_img.numpy()).float()
+            tgt_img = torch.from_numpy(tgt_img.numpy()).float()
         if not self.plot:
             src_img = src_img.to(self.device)
             tgt_img = tgt_img.to(self.device)

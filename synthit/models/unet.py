@@ -43,6 +43,11 @@ class Unet(torch.nn.Module):
             2 ** channel_base_power + n channels (this follows the convention in [1])
         add_two_up (bool): flag to add two to the kernel size on the upsampling following
             the paper [2]
+        normalization_layer (str): type of normalization layer to use (batch or [instance])
+        activation (str): type of activation to use throughout network except final ([relu], lrelu, linear, sigmoid, tanh)
+        output_activation (str): final activation in network (relu, lrelu, [linear], sigmoid, tanh)
+        use_up_conv (bool): Use resize-convolution in the U-net as per the Distill article:
+                            "Deconvolution and Checkerboard Artifacts" [Default=False]
 
     References:
         [1] O. Cicek, A. Abdulkadir, S. S. Lienkamp, T. Brox, and O. Ronneberger,
@@ -53,7 +58,8 @@ class Unet(torch.nn.Module):
 
     """
     def __init__(self, n_layers: int, kernel_size: int=3, dropout_p: float=0, patch_size: int=64, channel_base_power: int=5,
-                 add_two_up: bool=False, normalization_layer: str='instance', activation: str='relu', output_activation: str='linear'):
+                 add_two_up: bool=False, normalization: str='instance', activation: str='relu', output_activation: str='linear',
+                 use_up_conv: bool=False):
         super(Unet, self).__init__()
         # setup and store instance parameters
         self.n_layers = n_layers
@@ -62,12 +68,13 @@ class Unet(torch.nn.Module):
         self.patch_sz = patch_size
         self.channel_base_power = channel_base_power
         self.a2u = 2 if add_two_up else 0
-        self.norm = nm = normalization_layer
+        self.norm = nm = normalization
         self.act = a = activation
         self.out_act = oa = output_activation
+        self.use_up_conv = use_up_conv
         def lc(n): return int(2 ** (channel_base_power + n))  # shortcut to layer count
         # define the model layers here to make them visible for autograd
-        self.start = self.__dbl_conv_act(1, lc(0), lc(1))
+        self.start = self.__dbl_conv_act(1, lc(0), lc(1), act=(a, a), norm=(nm, nm))
         self.down_layers = nn.ModuleList([self.__dbl_conv_act(lc(n), lc(n), lc(n + 1), act=(a, a), norm=(nm, nm))
                                           for n in range(1, n_layers)])
         self.bridge = self.__dbl_conv_act(lc(n_layers), lc(n_layers), lc(n_layers + 1), act=(a, a), norm=(nm, nm))
@@ -75,9 +82,9 @@ class Unet(torch.nn.Module):
                                                             (kernel_size+self.a2u, kernel_size),
                                                             act=(a, a), norm=(nm, nm))
                                         for n in reversed(range(3, n_layers + 2))])
-        self.up_conv = nn.ModuleList([self.__conv(lc(n), lc(n))
-                                      for n in reversed(range(2, n_layers + 2))])
         self.finish = self.__final_conv(lc(2) + lc(1), lc(1), None, a, nm, oa)
+        if use_up_conv:
+            self.up_conv = nn.ModuleList([self.__conv(lc(n), lc(n)) for n in reversed(range(2, n_layers + 2))])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.start(x)
@@ -86,10 +93,14 @@ class Unet(torch.nn.Module):
         for dl in self.down_layers:
             dout.append(dl(x))
             x = F.max_pool3d(dout[-1], (2, 2, 2))
-        x = self.up_conv[0](F.interpolate(self.bridge(x), size=dout[-1].shape[2:]))
+        x = F.interpolate(self.bridge(x), size=dout[-1].shape[2:])
+        if self.use_up_conv:
+            x = self.up_conv[0](x)
         for i, (ul, d) in enumerate(zip(self.up_layers, reversed(dout)), 1):
             x = ul(torch.cat((x, d), dim=1))
-            x = self.up_conv[i](F.interpolate(x, size=dout[-i-1].shape[2:]))
+            x = F.interpolate(x, size=dout[-i-1].shape[2:])
+            if self.use_up_conv:
+                x = self.up_conv[i](x)
         x = self.finish(torch.cat((x, dout[0]), dim=1))
         return x
 
@@ -109,6 +120,10 @@ class Unet(torch.nn.Module):
             self.__conv(in_c, out_c, ksz),
             activation,
             normalization,
+            nn.Dropout3d(self.dropout_p, inplace=True)) if normalization is not None else \
+              nn.Sequential(
+            self.__conv(in_c, out_c, ksz),
+            activation,
             nn.Dropout3d(self.dropout_p, inplace=True))
         return ca
 
@@ -125,5 +140,5 @@ class Unet(torch.nn.Module):
                      act: Optional[str]=None, norm: Optional[str]=None, out_act: Optional[str]=None):
         ca = self.__conv_act(in_c, mid_c, kernel_sz, act, norm)
         c = self.__conv(mid_c, 1, 1)
-        fc = nn.Sequential(ca, c, get_act(out_act)) if out_act is not 'linear' else nn.Sequential(ca, c)
+        fc = nn.Sequential(ca, c, get_act(out_act)) if out_act != 'linear' else nn.Sequential(ca, c)
         return fc

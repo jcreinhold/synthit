@@ -51,7 +51,7 @@ def get_act(name: str, inplace: bool=True, params: Optional[dict]=None):
 def get_norm(name: str, num_features: int, params: Optional[dict]=None):
     """
     get normalization module from pytorch
-    must be one of: instance, batch
+    must be one of: instance, batch, none
 
     Args:
         name (str): name of normalization function desired
@@ -66,6 +66,8 @@ def get_norm(name: str, num_features: int, params: Optional[dict]=None):
         norm = nn.InstanceNorm3d(num_features, affine=True) if params is None else nn.InstanceNorm3d(num_features, **params)
     elif name.lower() == 'batch':
         norm = nn.BatchNorm3d(num_features) if params is None else nn.BatchNorm3d(num_features, **params)
+    elif name.lower() == 'none':
+        norm = None
     else:
         raise SynthError(f'Normalization: "{name}" not a valid normalization routine or not supported.')
     return norm

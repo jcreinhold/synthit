@@ -27,6 +27,7 @@ with warnings.catch_warnings():
     from torch.utils.data import DataLoader
     from torch.utils.data.sampler import SubsetRandomSampler
     from synthit import NiftiImageDataset, RandomCrop, SynthError
+    from synthit.util.io import AttrDict
 
 
 def arg_parser():
@@ -49,10 +50,16 @@ def arg_parser():
                          help="increase output verbosity (e.g., -vv is more than -v)")
     options.add_argument('-vc', '--validation-count', type=int, default=0,
                          help="number of datasets to use in validation")
+    options.add_argument('-ocf', '--out-config-file', type=str, default=None,
+                         help='output a config file for the options used in this experiment '
+                              '(saves them as a json file with the name as input in this argument)')
 
     synth_options = parser.add_argument_group('Synthesis Options')
     synth_options.add_argument('-ps', '--patch-size', type=int, default=64,
                                help='patch size^3 extracted from image [Default=64]')
+    synth_options.add_argument('-cm', '--crop-mask', action='store_true', default=False,
+                               help='crop the image according to the provided masks (or non-zero values). '
+                                    'assumes skull-stripped images [Default=False]')
 
     nn_options = parser.add_argument_group('Neural Network Options')
     nn_options.add_argument('-n', '--n-jobs', type=int, default=0,
@@ -69,15 +76,35 @@ def arg_parser():
                             help='learning rate of the neural network (uses Adam) [Default=1e-3]')
     nn_options.add_argument('-bs', '--batch-size', type=int, default=5,
                             help='batch size (num of images to process at once) [Default=5]')
+    nn_options.add_argument('-cbp', '--channel-base-power', type=int, default=5,
+                            help='batch size (num of images to process at once) [Default=5]')
     nn_options.add_argument('--plot-loss', type=str, default=None,
                             help='plot the loss vs epoch and save at the filename provided here [Default=None]')
+    nn_options.add_argument('--use-up-conv', action='store_true', default=False,
+                            help='Use resize-convolution in the U-net as per the Distill article: '
+                                 '"Deconvolution and Checkerboard Artifacts" [Default=False]')
+    nn_options.add_argument('--add-two-up', action='store_true', default=False,
+                            help='Add two to the kernel size on the upsampling in the U-Net as '
+                                 'per Zhao, et al. 2017 [Default=False]')
+    nn_options.add_argument('-nm', '--normalization', type=str, default='instance', choices=('instance', 'batch', 'none'),
+                            help='type of normalization layer to use in network [Default=instance]')
+    nn_options.add_argument('-ac', '--activation', type=str, default='relu', choices=('relu', 'lrelu'),
+                            help='type of activation to use throughout network except output [Default=relu]')
+    nn_options.add_argument('-oac', '--out-activation', type=str, default='linear', choices=('relu', 'lrelu', 'linear'),
+                            help='type of activation to use in network on output [Default=linear]')
     nn_options.add_argument('--disable-cuda', action='store_true', default=False,
                             help='Disable CUDA regardless of availability')
     return parser
 
 
 def main(args=None):
-    args = arg_parser().parse_args(args)
+    no_config_file = args is not None or (args is None and len(sys.argv[1:]) > 1)
+    if no_config_file:
+        args = arg_parser().parse_args(args)
+    else:
+        import json
+        with open(sys.argv[1:][0], 'r') as f:
+            args = AttrDict(json.load(f))
     if args.verbosity == 1:
         level = logging.getLevelName('INFO')
     elif args.verbosity >= 2:
@@ -93,10 +120,13 @@ def main(args=None):
         # get the desired neural network architecture
         if args.nn_arch == 'nconv':
             from synthit.models.nconvnet import Conv3dNLayerNet
+            logger.warning('The nconv network is for basic testing.')
             model = Conv3dNLayerNet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size)
         elif args.nn_arch == 'unet':
             from synthit.models.unet import Unet
-            model = Unet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size)
+            model = Unet(args.n_layers, kernel_size=args.kernel_size, dropout_p=args.dropout_prob, patch_size=args.patch_size,
+                         channel_base_power=args.channel_base_power, add_two_up=args.add_two_up, normalization=args.normalization,
+                         activation=args.activation, output_activation=args.out_activation, use_up_conv=args.use_up_conv)
         else:
             raise SynthError(f'Invalid NN type: {args.nn_arch}. {{nconv, unet}} are the only supported options.')
         logger.debug(model)
@@ -107,6 +137,14 @@ def main(args=None):
 
         # control random cropping patch size (or if used at all)
         crop = RandomCrop(args.patch_size) if args.patch_size > 0 else None
+
+        # if crop mask enabled do not use predefined crop and set batch size to 1, patch size set to zero for consistency
+        if args.crop_mask:
+            if args.batch_size > 1:
+                logger.info('If crop-mask option enabled, then batch size is automatically set to 1.')
+                args.batch_size = 1
+            args.patch_size = 0
+            crop = None
 
         # define dataset and split into training/validation set
         dataset = NiftiImageDataset(args.source_dir, args.target_dir, crop=crop, disable_cuda=args.disable_cuda)
@@ -159,13 +197,33 @@ def main(args=None):
 
             validation_losses.append(losses)
 
-        # save the whole model (if changes occur to pytorch, then this model will probably not be loadable)
-        torch.save(model, args.output)
+        # output a config file if desired
+        if args.out_config_file is not None:
+            import json
+            arg_dict = vars(args)
+            # add these keys so that the output config file can be edited for use in prediction
+            arg_dict['trained_model'] = args.output
+            arg_dict['predict_dir'] = None
+            arg_dict['predict_out'] = None
+            arg_dict['predict_mask_dir'] = None
+            with open(args.out_config_file, 'w') as f:
+                json.dump(arg_dict, f, sort_keys=True, indent=2)
+
+        # save the trained model
+        if not no_config_file or args.out_config_file is not None:
+            torch.save(model.state_dict(), args.output)
+        else:
+            # save the whole model (if changes occur to pytorch, then this model will probably not be loadable)
+            logger.warning('Saving the entire model. Preferred to create a config file and only save model weights')
+            torch.save(model, args.output)
 
         # plot the loss vs epoch (if desired)
         if args.plot_loss is not None:
-            plot_error = True if (not args.n_epochs > 50) else False
+            plot_error = True if args.n_epochs <= 50 else False
             from synthit import plot_loss
+            if matplotlib.get_backend() != 'agg':
+                import matplotlib.pyplot as plt
+                plt.switch_backend('agg')
             ax = plot_loss(train_losses, ecolor='maroon', label='Train', plot_error=plot_error)
             _ = plot_loss(validation_losses, filename=args.plot_loss, ecolor='firebrick', ax=ax, label='Validation', plot_error=plot_error)
 
