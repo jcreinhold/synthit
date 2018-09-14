@@ -73,14 +73,13 @@ def main(args=None):
     logger = logging.getLogger(__name__)
     try:
         # set torch to use cuda if available (and desired) and set number of threads for the CPU (if enabled)
-        dev_str = "cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu"
-        device = torch.device(dev_str)
+        device = torch.device("cuda" if torch.cuda.is_available() and not args.disable_cuda else "cpu")
         torch.set_num_threads(args.n_jobs)
 
         # load the trained model
         if no_config_file:
             logger.warning('Loading entire serialized model in non-preferred way (without config file)')
-            model = torch.load(args.trained_model, map_location=dev_str)
+            model = torch.load(args.trained_model)
         else:
             if args.nn_arch == 'nconv':
                 from synthit.models.nconvnet import Conv3dNLayerNet
@@ -92,8 +91,12 @@ def main(args=None):
                              activation=args.activation, output_activation=args.out_activation, use_up_conv=args.use_up_conv)
             else:
                 raise SynthError(f'Invalid NN type: {args.nn_arch}. {{nconv, unet}} are the only supported options.')
-            model.load_state_dict(torch.load(args.trained_model, map_location=dev_str))
+            model.load_state_dict(torch.load(args.trained_model))
         logger.debug(model)
+
+        # put the model on the GPU if available and desired
+        if torch.cuda.is_available() and not args.disable_cuda:
+            model.cuda()
 
         # set convenience variables and grab filenames of images to synthesize
         psz = model.patch_sz
@@ -130,7 +133,7 @@ def main(args=None):
                 out_img_ants = img_ants.new_image_like(out_img / count_mtx)
             else:
                 test_img_t = torch.from_numpy(img).to(device)[None, None, ...]
-                out_img = np.squeeze(model.forward(test_img_t).data.numpy())
+                out_img = np.squeeze(model.forward(test_img_t).cpu().data.numpy())
                 out_img_ants = img_ants.new_image_like(out_img)
             out_fn = args.predict_out + str(k) + '.nii.gz'
             out_img_ants.to_file(out_fn)

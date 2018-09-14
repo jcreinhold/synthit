@@ -22,5 +22,11 @@ Synthesis Quality
 Neural Network Dataset Tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: synthit.util.dataset
+.. automodule:: synthit.util.nn.dataset
+   :members:
+
+Neural Network Helper Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: synthit.util.nn.helper
    :members:

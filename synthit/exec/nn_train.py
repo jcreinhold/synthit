@@ -92,6 +92,8 @@ def arg_parser():
                             help='type of activation to use throughout network except output [Default=relu]')
     nn_options.add_argument('-oac', '--out-activation', type=str, default='linear', choices=('relu', 'lrelu', 'linear'),
                             help='type of activation to use in network on output [Default=linear]')
+    nn_options.add_argument('-mp', '--fp16', action='store_true', default=False,
+                            help='enable mixed precision training')
     nn_options.add_argument('--disable-cuda', action='store_true', default=False,
                             help='Disable CUDA regardless of availability')
     return parser
@@ -114,6 +116,15 @@ def main(args=None):
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level)
     logger = logging.getLogger(__name__)
     try:
+        # import and initialize mixed precision training package
+        amp_handle = None
+        if args.fp16:
+           try:
+               from apex import amp
+               amp_handle = amp.init()
+           except ImportError:
+               logger.info('Mixed precision training (i.e., the package `apex`) not available.')
+
         # set number of threads if using CPU
         torch.set_num_threads(args.n_jobs)
 
@@ -149,6 +160,7 @@ def main(args=None):
         # define dataset and split into training/validation set
         dataset = NiftiImageDataset(args.source_dir, args.target_dir, crop=crop, disable_cuda=args.disable_cuda)
 
+        # setup training and validation set
         num_train = len(dataset)
         indices = list(range(num_train))
         split = args.validation_count
@@ -181,7 +193,11 @@ def main(args=None):
 
                 # Zero gradients, perform a backward pass, and update the weights.
                 optimizer.zero_grad()
-                loss.backward()
+                if args.fp16 and amp_handle is not None:
+                    with amp_handle.scale_loss(loss, optimizer) as scaled_loss:
+                        scaled_loss.backward()
+                else:
+                    loss.backward()
                 optimizer.step()
             train_losses.append(losses)
 
