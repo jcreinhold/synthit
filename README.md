@@ -45,6 +45,11 @@ or (if you actively want to make changes to the package)
 
     python setup.py develop
 
+Tutorial
+--------
+
+[5 minute Overview](https://github.com/jcreinhold/synthit/blob/master/tutorials/5min_tutorial.md)
+
 Singularity
 -----------
 
