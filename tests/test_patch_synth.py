@@ -47,7 +47,7 @@ class TestPatchSynth(unittest.TestCase):
        _ = ps.predict([self.img], self.mask)
 
     def test_patch_mlr(self):
-        from synthit.models.mlr import LinearRegressionMixture
+        from synthit.synth.mlr import LinearRegressionMixture
         regr = LinearRegressionMixture(3, num_restarts=2, num_workers=1, max_iterations=1)
         ps = PatchSynth(regr, n_samples=10, flatten=True)
         ps.fit([[self.img]], [self.img], [self.mask])

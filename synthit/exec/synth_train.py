@@ -39,7 +39,7 @@ def arg_parser():
                          help='path to output the trained regressor')
     options.add_argument('-m', '--mask-dir', type=str, default=None,
                          help='optional directory of brain masks for images')
-    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr', 'br', 'mlp'),
+    options.add_argument('-r', '--regr-type', type=str, default='rf', choices=('rf', 'xg', 'pr', 'mlr', 'mlp'),
                          help='specify type of regressor to use')
     options.add_argument('-v', '--verbosity', action="count", default=0,
                          help="increase output verbosity (e.g., -vv is more than -v)")
@@ -118,22 +118,18 @@ def main(args=None):
             regr = LinearRegression(n_jobs=args.n_jobs, fit_intercept=True if args.poly_deg is None else False)
             flatten = False
         elif args.regr_type == 'mlr':
-            from synthit.models.mlr import LinearRegressionMixture
+            from synthit.synth.mlr import LinearRegressionMixture
             regr = LinearRegressionMixture(3, num_restarts=args.num_restarts, num_workers=args.n_jobs,
                                            max_iterations=args.max_iterations, threshold=args.threshold)
             args.poly_deg = 1 if args.poly_deg is None else args.poly_deg  # hack to get bias term included in features
             flatten = True
-        elif args.regr_type == 'br':
-            from synthit.models.br import BayesianRegression
-            regr = BayesianRegression()
-            flatten = False
         elif args.regr_type == 'mlp':
             from sklearn.neural_network import MLPRegressor
             regr = MLPRegressor(hidden_layer_sizes=args.hidden_layer_sizes, max_iter=args.max_iterations,
                                 random_state=args.random_seed, verbose=True if args.verbosity >= 2 else False)
             flatten = True
         else:
-            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, br, mlp}} are the only supported options.'.format(args.regr_type))
+            raise SynthError('Invalid regressor type: {}. {{rf, xg, pr, mlr, mlp}} are the only supported options.'.format(args.regr_type))
         logger.debug(regr)
         ps = PatchSynth(regr, args.patch_size, args.n_samples, args.ctx_radius, args.threshold, args.poly_deg,
                         args.mean, args.full_patch, flatten, args.use_xyz)

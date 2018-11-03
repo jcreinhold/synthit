@@ -7,17 +7,19 @@ synthit
 [![Docker Automated Build](https://img.shields.io/docker/build/jcreinhold/synthit.svg)](https://hub.docker.com/r/jcreinhold/synthit/)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
-This package contains code to synthesize magnetic resonance (MR) and computed tomography (CT) brain images. Synthesis is the procedure 
+This package contains *non*-deep neural network-based code to synthesize magnetic resonance (MR) and computed tomography (CT) brain images. Synthesis is the procedure 
 of learning the transformation that takes a specific contrast image to another estimate contrast.
 
 For example, given a set of T1-weighted (T1-w) and T2-weighted (T2-w) images, we can learn the function that maps the intensities of the
-T1-w image to match that of the T2-w image via a random forest regressor or deep neural network. In this package, we supply 
+T1-w image to match that of the T2-w image via a random forest regressor or polynomial regressor. In this package, we supply 
 the framework and some basic algorithms for this type of synthesis. See the `Relevant Papers` section (at the bottom of 
 the README) for a non-exhaustive list of some papers relevant to the work in this package.
 
+We also support a DNN-based synthesis package called [synthnn](https://gitlab.com/jcreinhold/synthnn).
+
 ** Note that this is an **alpha** release. If you have feedback or problems, please submit an issue (it is very appreciated) **
 
-This package was developed by [Jacob Reinhold](https:jcreinhold.github.io) and the other students and researchers of the 
+This package was developed by [Jacob Reinhold](https://jcreinhold.github.io) and the other students and researchers of the 
 [Image Analysis and Communication Lab (IACL)](http://iacl.ece.jhu.edu/index.php/Main_Page).
 
 [Link to main Gitlab Repository](https://gitlab.com/jcreinhold/synthit)
@@ -73,4 +75,3 @@ Relevant Papers
 
 [1] A. Jog, A. Carass, S. Roy, D. L. Pham, and J. L. Prince, “Random forest regression for magnetic resonance image synthesis,” Med. Image Anal., vol. 35, pp. 475–488, 2017.
 
-[2] C. Zhao, A. Carass, J. Lee, Y. He, and J. L. Prince, “Whole Brain Segmentation and Labeling from CT Using Synthetic MR Images,” in MICCAI MLMI, vol. 10541, pp. 291–298, 2017.

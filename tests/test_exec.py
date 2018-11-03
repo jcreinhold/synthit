@@ -16,8 +16,6 @@ import tempfile
 import unittest
 
 from synthit.exec.directory_view import main as directory_view
-from synthit.exec.nn_train import main as nn_train
-from synthit.exec.nn_predict import main as nn_predict
 from synthit.exec.synth_train import main as synth_train
 from synthit.exec.synth_predict import main as synth_predict
 from synthit.exec.synth_quality import main as synth_quality
@@ -37,27 +35,6 @@ class TestCLI(unittest.TestCase):
     def test_directory_view_cli(self):
         args = f'-i {self.data_dir} -o {self.out_dir}'.split()
         retval = directory_view(args)
-        self.assertEqual(retval, 0)
-
-    def test_nn_nconv_nopatch_cli(self):
-        args = self.train_args + f'-o {self.out_dir}/nconv_nopatch.mdl -na nconv -ne 2 -nl 1 -ps 0 --plot-loss {self.out_dir}/loss.png'.split()
-        retval = nn_train(args)
-        self.assertEqual(retval, 0)
-        args = self.predict_args + f'-t {self.out_dir}/nconv_nopatch.mdl'.split()
-        retval = nn_predict(args)
-        self.assertEqual(retval, 0)
-
-    def test_nn_nconv_patch_cli(self):
-        args = self.train_args + f'-o {self.out_dir}/nconv_patch.mdl -na nconv -ne 1 -nl 1 -ps 5'.split()
-        retval = nn_train(args)
-        self.assertEqual(retval, 0)
-        args = self.predict_args + f'-t {self.out_dir}/nconv_patch.mdl'.split()
-        retval = nn_predict(args)
-        self.assertEqual(retval, 0)
-
-    def test_nn_train_unet_cli(self):
-        args = self.train_args + f'-o {self.out_dir}/unet.mdl -na unet -ne 1 -nl 1 -ps 16'.split()
-        retval = nn_train(args)
         self.assertEqual(retval, 0)
 
     def test_linear_regression_synth_cli(self):

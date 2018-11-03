@@ -42,12 +42,10 @@ args = dict(
     author_email='jacob.reinhold@jhu.edu',
     url='https://gitlab.com/jcreinhold/synthit',
     license=license,
-    packages=find_packages(exclude=('tests', 'docs')),
+    packages=find_packages(exclude=('tests', 'tutorials', 'docs')),
     entry_points = {
         'console_scripts': ['directory-view=synthit.exec.directory_view:main',
                             'synth-quality=synthit.exec.synth_quality:main',
-                            'nn-train=synthit.exec.nn_train:main',
-                            'nn-predict=synthit.exec.nn_predict:main',
                             'synth-train=synthit.exec.synth_train:main',
                             'synth-predict=synthit.exec.synth_predict:main',]
     },

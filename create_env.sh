@@ -41,22 +41,13 @@ conda_forge_packages=(
     xgboost==0.72.1
 )
 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    pytorch_packages=(pytorch-cpu==0.4.1 torchvision-cpu==0.2.1)
-else
-    pytorch_packages=(pytorch==0.4.1 torchvision==0.2.1)
-fi
-
 # set conda to pull packages from specific repositories
 conda config --add channels conda-forge
 conda config --add channels pytorch
 
 # create the environment and switch to that environment
-conda create --name synthit python==3.6.6 ${packages[@]} ${conda_forge_packages[@]} ${pytorch_packages[@]} --yes || return
+conda create --name synthit python==3.6.6 ${packages[@]} ${conda_forge_packages[@]} --yes || return
 source activate synthit || return
-
-# install a few packages not found through conda
-pip install -U --no-deps pyro-ppl==0.2.1
 
 # install ANTsPy
 if [[ "$OSTYPE" == "linux-gnu" ]]; then

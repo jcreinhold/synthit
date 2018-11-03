@@ -46,45 +46,6 @@ This command will synthesize FLAIR images from all the T1-w images in the `test/
 previous command. The synthesized images will be saved in the `results/` directory with the same name as the original image
 except the filename ends with `_syn.nii.gz`.
 
-## Deep Neural Network-based Synthesis
-
-To use a deep neural network via pytorch for synthesis, we provide an example call to the training routine:
-
-```bash
-nn-train -s t1/ \
-         -t flair/ \
-         --output model_dir/unet.pkl" \
-         --nn-arch unet \
-         --n-layers 3 \
-         --n-epochs 100 \
-         --patch-size 64 \
-         --batch-size 1 \
-         --n-jobs 0 \
-         --validation-count 1 \
-         --plot-loss loss_test.png \
-         -vv \
-         --out-config-file config.json 
-``` 
-
-Note the `--out-config-file` argument which creates a json file which contains all the experiment configurations.
-We can then use the following command to run addition training as follows:
-
-```bash
-nn-train config.json
-```
-
-You can edit the config.json file directly to edit experiment parameters, and this is the preferred interface for using
-the neural network synthesis routines.
-
-You can either call `nn-predict` as in the first example with the relevant parameters filled in (see the `-h` option to 
-view all the commands). The preferred way to interact with `nn-predict` is to generate a configuration file, edit
-the prediction directory parameters in the file (which should only consist of setting the directory on which to do synthesis
-and set the directory to output the results), and then run the command:
-
-```bash
-nn-predict config.json
-```
-
 ## Additional Provided Routines
 
 There a variety of other routines provided for analysis. The CLI names are:

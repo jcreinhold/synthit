@@ -15,7 +15,7 @@ import shutil
 import tempfile
 import unittest
 
-from synthit import directory_view, plot_loss, plot_dir_synth_quality
+from synthit import directory_view, plot_dir_synth_quality
 
 
 class TestPlot(unittest.TestCase):
@@ -29,10 +29,6 @@ class TestPlot(unittest.TestCase):
     @unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
     def test_directory_view(self):
         directory_view(self.data_dir, out_dir=self.out_dir, trim=False)
-
-    def test_nn_viz(self):
-        all_losses = [[1,2],[3,4]]
-        _ = plot_loss(all_losses)
 
     def test_synth_quality(self):
         plot_dir_synth_quality(self.data_dir, self.data_dir, mask_dir=self.mask_dir, out_dir=self.out_dir)
