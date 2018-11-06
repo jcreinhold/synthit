@@ -30,7 +30,8 @@ def arg_parser():
     required = parser.add_argument_group('Required')
     required.add_argument('-s', '--source-dir', type=str, required=True, nargs='+',
                         help='path to directory with domain images '
-                             '(multiple paths can be provided for multi-modal synthesis)')
+                             '(multiple paths can be provided for multi-modal synthesis, '
+                             'put T1-w images first if they are not skull-stripped)')
     required.add_argument('-t', '--target-dir', type=str, required=True,
                           help='path to directory with target images')
 

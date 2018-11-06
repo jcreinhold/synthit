@@ -111,6 +111,7 @@ class PatchSynth():
             # only use the first for consistency across indices since co-registration assumed
             idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else src_data[0].mean()) \
                 if msk is None else np.where(msk.numpy() == 1)
+            idxs = self.__check_idxs(src_data[0], idxs)
             if self.n_samples is not None:
                 if idxs[0].size < self.n_samples:
                     logger.warning('n_samples is greater than the number of samples available in the image ({} > {})'
@@ -135,9 +136,9 @@ class PatchSynth():
     def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """
         src_data = [src.numpy() for src in source]
-        # only use the first for consistency across indices since co-registration assumed
-        idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else src_data[0].mean()) \
+        idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else 0) \
             if mask is None else np.where(mask.numpy() == 1)
+        idxs = self.__check_idxs(src_data[0], idxs)
         if len(source) == 1:
             patches = self.__extract_patches(src_data[0], idxs)
         else:
@@ -149,6 +150,18 @@ class PatchSynth():
         patches = extract_patches(data, idxs, self.patch_size, self.threshold, self.context_radius,
                                   self.economy_patch, self.mean)
         return patches
+
+    def __check_idxs(self, data, idxs):
+        h, w, d = data.shape
+        h_idxs, w_idxs, d_idxs = idxs
+        rad = max(self.context_radius)
+        valid_h = np.logical_and(rad < h_idxs, h_idxs < h - rad)
+        valid_w = np.logical_and(rad < w_idxs, w_idxs < w - rad)
+        valid_d = np.logical_and(rad < d_idxs, d_idxs < d - rad)
+        valid_mask = np.logical_and(valid_h, np.logical_and(valid_w, valid_d))
+        valid_idxs = tuple([idx[valid_mask] for idx in idxs])
+        logger.debug(f'Number of valid idxs, orig idxs: {valid_idxs[0].size}, {idxs[0].size}')
+        return valid_idxs
 
     @staticmethod
     def image_list(img_dir):
