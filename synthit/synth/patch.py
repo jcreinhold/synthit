@@ -37,6 +37,7 @@ class PatchSynth():
         context_radius (tuple): tuple containing number of voxels away to get context from (e.g., (3,5) means
             get context values at 3 voxels and 5 voxels away from the patch center)
         threshold (float): threshold that separated background and foreground (foreground greater than threshold)
+            if None, then use the image mean as the threshold
         poly_deg (int): degree of polynomial features to generate from patch samples
         mean (bool): use the mean of the patch instead of the patch values
         full_patch (bool): use a full patch instead of the 6-nearest neighbors
@@ -44,7 +45,7 @@ class PatchSynth():
         use_xyz (bool): use x,y,z coordinates as features
     """
 
-    def __init__(self, regr, patch_size=3, n_samples=1e5, context_radius=(3,5,7), threshold=0, poly_deg=None,
+    def __init__(self, regr, patch_size=3, n_samples=1e5, context_radius=(3,5,7), threshold=None, poly_deg=None,
                  mean=False, full_patch=False, flatten=True, use_xyz=False):
         self.patch_size = patch_size
         self.n_samples = n_samples
@@ -108,7 +109,8 @@ class PatchSynth():
             src_data = [src_.numpy() for src_ in src]
             tgt_data = tgt.numpy()
             # only use the first for consistency across indices since co-registration assumed
-            idxs = np.where(src_data[0] > self.threshold) if msk is None else np.where(msk.numpy() == 1)
+            idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else src_data[0].mean()) \
+                if msk is None else np.where(msk.numpy() == 1)
             if self.n_samples is not None:
                 if idxs[0].size < self.n_samples:
                     logger.warning('n_samples is greater than the number of samples available in the image ({} > {})'
@@ -133,7 +135,9 @@ class PatchSynth():
     def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """
         src_data = [src.numpy() for src in source]
-        idxs = np.where(src_data[0] > self.threshold) if mask is None else np.where(mask.numpy() == 1)
+        # only use the first for consistency across indices since co-registration assumed
+        idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else src_data[0].mean()) \
+            if mask is None else np.where(mask.numpy() == 1)
         if len(source) == 1:
             patches = self.__extract_patches(src_data[0], idxs)
         else:

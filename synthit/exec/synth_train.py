@@ -48,18 +48,18 @@ def arg_parser():
                               'provided, then 5 models are trained where all the data are used except one).')
 
     synth_options = parser.add_argument_group('Synthesis Options')
-    synth_options.add_argument('--patch-size', type=int, default=3,
+    synth_options.add_argument('-ps', '--patch-size', type=int, default=3,
                                help='patch size extracted for regression [Default=3]')
-    synth_options.add_argument('--full-patch', action='store_true', default=False,
+    synth_options.add_argument('-fp', '--full-patch', action='store_true', default=False,
                                help='use the full patch in regression vs a reduced size patch [Default=False]')
-    synth_options.add_argument('--n-samples', type=float, default=None,
+    synth_options.add_argument('-ns', '--n-samples', type=float, default=None,
                                help='use randomly sampled (with replacement) `n_samples` voxels for training '
                                     'regressor (None uses all voxels) [Default=None]')
-    synth_options.add_argument('--ctx-radius', type=int, default=(3,5,7), nargs='+',
+    synth_options.add_argument('-cr', '--ctx-radius', type=int, default=(3,5,7), nargs='+',
                                help='context radii to use when extracting patches [Default=(3,5,7)]')
-    synth_options.add_argument('--threshold', type=int, default=0,
+    synth_options.add_argument('-th', '--threshold', type=int, default=0,
                                help='threshold for foreground and background (above is foreground) [Default=0]')
-    synth_options.add_argument('--poly-deg', type=int, default=None,
+    synth_options.add_argument('-pd', '--poly-deg', type=int, default=None,
                                help='degree of polynomial features derived from extracted patches '
                                     '(None means do not use polynomial features) [Default=None]')
     synth_options.add_argument('--mean', action='store_true', default=False,
@@ -70,21 +70,21 @@ def arg_parser():
     regr_options = parser.add_argument_group('Regressor Options')
     regr_options.add_argument('-n', '--n-jobs', type=int, default=-1,
                               help='number of processors to use (-1 is all processors) [Default=-1]')
-    regr_options.add_argument('--min-leaf', type=int, default=5,
-                              help='minimum number of leaves in rf (see min_samples_leaf) [Default=5]')
-    regr_options.add_argument('--n-trees', type=int, default=60,
+    regr_options.add_argument('-msl', '--min-samp-leaf', type=int, default=5,
+                              help='minimum number of samples in each leaf in rf (see min_samples_leaf) [Default=5]')
+    regr_options.add_argument('-nt', '--n-trees', type=int, default=60,
                               help='number of trees in rf or xg (see n_estimators) [Default=60]')
-    regr_options.add_argument('--max-features', default=(1.0/3.0),
+    regr_options.add_argument('-mf', '--max-features', default=(1.0/3.0),
                               help='proportion of features to use in rf (see max_features) [Default=1/3]')
-    regr_options.add_argument('--max-depth', type=int, default=None,
+    regr_options.add_argument('-md', '--max-depth', type=int, default=None,
                               help='maximum tree depth in rf or xg [Default=None (3 for xg)]')
-    regr_options.add_argument('--num-restarts', type=int, default=8,
+    regr_options.add_argument('-nr', '--num-restarts', type=int, default=8,
                               help='number of restarts for mlr (since finds local optimum) [Default=8]')
-    regr_options.add_argument('--max-iterations', type=int, default=20,
+    regr_options.add_argument('-mi', '--max-iterations', type=int, default=20,
                               help='maximum number of iterations for mlr and mlp [Default=20]')
-    regr_options.add_argument('--hidden-layer-sizes', type=int, nargs='+', default=(100,),
+    regr_options.add_argument('-hls', '--hidden-layer-sizes', type=int, nargs='+', default=(100,),
                               help='number of neurons in each hidden layer for mlp [Default=(100,)]')
-    regr_options.add_argument('--random-seed', default=0,
+    regr_options.add_argument('-rs', '--random-seed', default=0,
                               help='set random seed for reproducibility [Default=0]')
     return parser
 
@@ -103,7 +103,7 @@ def main(args=None):
         np.random.seed(args.random_seed)
         if args.regr_type == 'rf':
             from sklearn.ensemble import RandomForestRegressor
-            regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_leaf, n_estimators=args.n_trees,
+            regr = RandomForestRegressor(n_jobs=args.n_jobs, min_samples_leaf=args.min_samp_leaf, n_estimators=args.n_trees,
                                          max_features=args.max_features, max_depth=args.max_depth,
                                          random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
             flatten = True

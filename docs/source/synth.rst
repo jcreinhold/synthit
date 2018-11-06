@@ -12,5 +12,5 @@ Patch Based Synthesis
 Mixture of Linear Regressors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: synthit.LinearRegressionMixture
+.. autoclass:: synthit.LinearRegressionMixture
    :members:
