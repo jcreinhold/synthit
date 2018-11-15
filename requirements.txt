@@ -1,9 +1,5 @@
-matplotlib
 numpy
-pillow
 scikit-learn
 scikit-image
 scipy
-seaborn
 xgboost
-webcolors

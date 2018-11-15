@@ -22,7 +22,7 @@ with open('LICENSE') as f:
 
 args = dict(
     name='synthit',
-    version='0.1.1',
+    version='1.0.0',
     description="Synthesize MR and CT brain images",
     long_description=readme,
     author='Jacob Reinhold',
@@ -31,17 +31,13 @@ args = dict(
     license=license,
     packages=find_packages(exclude=('tests', 'tutorials', 'docs')),
     entry_points = {
-        'console_scripts': ['directory-view=synthit.exec.directory_view:main',
-                            'synth-quality=synthit.exec.synth_quality:main',
-                            'synth-train=synthit.exec.synth_train:main',
+        'console_scripts': ['synth-train=synthit.exec.synth_train:main',
                             'synth-predict=synthit.exec.synth_predict:main',]
     },
     keywords="mr image synthesis",
 )
 
-setup(install_requires=['antspy',
-                        'matplotlib',
-                        'numpy',
+setup(install_requires=['numpy',
                         'scikit-learn',
                         'scikit-image',
                         'scipy',

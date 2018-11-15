@@ -17,7 +17,7 @@ import mock
 import os
 import sys
 
-MOCK_MODULES = ['ants','numpy','sklearn','sklearn.ensemble','sklearn.externals','sklearn.preprocessing',
+MOCK_MODULES = ['ants','numpy','nibabel','sklearn','sklearn.ensemble','sklearn.externals','sklearn.preprocessing',
                 'xgboost','matplotlib','matplotlib.pyplot','scipy','scipy.spatial','scipy.ndimage',
                 'scipy.stats','seaborn','skimage','skimage.measure','sklearn.neighbors','pyro','pyro.distributions',
                 'pyro.infer','pyro.optim','torch','torch.nn','torch.utils','torch.utils.data', 'torch.utils.data.sampler']
@@ -26,7 +26,7 @@ for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
 # this should not be needed with the above, but meh
-autodoc_mock_imports = ['ants','numpy','sklearn','xgboost','torch','scipy','pyro','matplotlib','seaborn','skimage']
+autodoc_mock_imports = ['ants','nibabel','numpy','sklearn','xgboost','torch','scipy','pyro','matplotlib','seaborn','skimage']
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
@@ -43,9 +43,9 @@ copyright = '2018, Jacob Reinhold'
 author = 'Jacob Reinhold'
 
 # The short X.Y version
-version = '0.1'
+version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+release = '1.0.0'
 
 
 # -- General configuration ---------------------------------------------------

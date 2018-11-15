@@ -18,8 +18,6 @@ the README) for a non-exhaustive list of some papers relevant to the work in thi
 We also support a DNN-based synthesis package called [synthnn](https://gitlab.com/jcreinhold/synthnn).
 There is also a seperate package to gather quality metrics of the synthesis result called [synthqc](https://gitlab.com/jcreinhold/synthqc).
 
-** Note that this is an **alpha** release. If you have feedback or problems, please submit an issue (it is very appreciated) **
-
 This package was developed by [Jacob Reinhold](https://jcreinhold.github.io) and the other students and researchers of the 
 [Image Analysis and Communication Lab (IACL)](http://iacl.ece.jhu.edu/index.php/Main_Page).
 
@@ -34,17 +32,10 @@ Requirements
 - scikit-image
 - xgboost
 
-Basic Usage
------------
+Installation
+------------
 
-
-Install from the source directory
-
-    python setup.py install
-    
-or (if you actively want to make changes to the package)
-
-    python setup.py develop
+    pip install git+git://github.com/jcreinhold/synthit.git
 
 Tutorial
 --------
