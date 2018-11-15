@@ -13,7 +13,7 @@ Created on: May 01, 2018
 import os
 import unittest
 
-import ants
+import nibabel as nib
 
 from synthit import split_filename, glob_nii, extract_patches
 
@@ -26,8 +26,8 @@ class TestUtilities(unittest.TestCase):
         self.mask_dir = os.path.join(wd, 'test_data', 'masks')
         self.img_fn = os.path.join(self.data_dir, 'test.nii.gz')
         self.mask_fn = os.path.join(self.mask_dir, 'mask.nii.gz')
-        self.img = ants.image_read(self.img_fn)
-        self.mask = ants.image_read(self.mask_fn)
+        self.img = nib.load(self.img_fn)
+        self.mask = nib.load(self.mask_fn)
 
     def test_glob_nii(self):
         fn = glob_nii(self.data_dir)[0]
@@ -40,7 +40,7 @@ class TestUtilities(unittest.TestCase):
         self.assertEqual(ext, '.nii.gz')
 
     def test_extract_patches(self):
-        _ = extract_patches(self.img.numpy() * self.mask.numpy())
+        _ = extract_patches(self.img.get_data() * self.mask.get_data())
 
     def tearDown(self):
         del self.img, self.mask
