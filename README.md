@@ -5,7 +5,7 @@ synthit
 [![Coverage Status](https://coveralls.io/repos/github/jcreinhold/synthit/badge.svg?branch=master)](https://coveralls.io/github/jcreinhold/synthit?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/synthit/badge/?version=latest)](http://synthit.readthedocs.io/en/latest/?badge=latest)
 [![Docker Automated Build](https://img.shields.io/docker/build/jcreinhold/synthit.svg)](https://hub.docker.com/r/jcreinhold/synthit/)
-[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![Python Versions](https://img.shields.io/badge/python-3.6%20%7C%203.7-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
 This package contains *non*-deep neural network-based code to synthesize magnetic resonance (MR) and computed tomography (CT) brain images. Synthesis is the procedure 
 of learning the transformation that takes a specific contrast image to another estimate contrast.
@@ -16,6 +16,7 @@ the framework and some basic algorithms for this type of synthesis. See the `Rel
 the README) for a non-exhaustive list of some papers relevant to the work in this package.
 
 We also support a DNN-based synthesis package called [synthnn](https://gitlab.com/jcreinhold/synthnn).
+There is also a seperate package to gather quality metrics of the synthesis result called [synthqc](https://gitlab.com/jcreinhold/synthqc).
 
 ** Note that this is an **alpha** release. If you have feedback or problems, please submit an issue (it is very appreciated) **
 
@@ -27,17 +28,15 @@ This package was developed by [Jacob Reinhold](https://jcreinhold.github.io) and
 Requirements
 ------------
 
-- antspy
 - matplotlib
 - numpy
-- pyro
 - scikit-learn
 - scikit-image
-- pytorch
 - xgboost
 
 Basic Usage
 -----------
+
 
 Install from the source directory
 

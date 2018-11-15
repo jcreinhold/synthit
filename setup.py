@@ -12,7 +12,6 @@ Created on: Jun 20, 2018
 """
 
 from setuptools import setup, find_packages
-from sys import platform
 
 
 with open('README.md') as f:
@@ -21,21 +20,9 @@ with open('README.md') as f:
 with open('LICENSE') as f:
     license = f.read()
 
-if platform == "linux" or platform == "linux32":
-    antspy = "https://github.com/ANTsX/ANTsPy/releases/download/v0.1.4/antspy-0.1.4-cp36-cp36m-linux_x86_64.whl"
-elif platform == "darwin":
-    try:
-        import ants
-        antspy = ""
-    except ImportError:
-        raise Exception('On OS X you need to build ANTsPy from source before installing the synthit package. '
-                        'See the "install ANTsPy" section of create_env.sh for the necessary commands.')
-else:
-    raise Exception('synthit package only supports linux and OS X')
-
 args = dict(
     name='synthit',
-    version='0.1.0',
+    version='0.1.1',
     description="Synthesize MR and CT brain images",
     long_description=readme,
     author='Jacob Reinhold',
@@ -50,7 +37,6 @@ args = dict(
                             'synth-predict=synthit.exec.synth_predict:main',]
     },
     keywords="mr image synthesis",
-    dependency_links=[antspy]
 )
 
 setup(install_requires=['antspy',
@@ -59,6 +45,4 @@ setup(install_requires=['antspy',
                         'scikit-learn',
                         'scikit-image',
                         'scipy',
-                        'torch',
-                        'torchvision',
                         'xgboost'], **args)

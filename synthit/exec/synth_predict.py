@@ -20,7 +20,7 @@ import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
     warnings.filterwarnings('ignore', category=UserWarning)
-    import ants
+    import nibabel as nib
     from sklearn.externals import joblib
     from synthit import split_filename, glob_nii, SynthError
 
@@ -51,12 +51,14 @@ def process(ps, img_fn, mask_fn, k, n, logger, args):
     img_fn = img_fn[0]
     dirpath, base, _ = split_filename(img_fn[0])
     logger.info('Synthesizing image from: {} ({:d}/{:d})'.format(base, k, n))
-    mask = None if mask_fn is None else ants.image_read(mask_fn)
-    img = [ants.image_read(img_fn_) if mask is None else ants.image_read(img_fn_) * mask for img_fn_ in img_fn]
+    mask = None if mask_fn is None else nib.load(mask_fn)
+    img = [nib.load(img_fn_) for img_fn_ in img_fn]
+    if mask is not None:
+        img = [nib.Nifti1Image(d.get_data() * mask.get_data(), d.affine, d.header) for d in img]
     synth = ps.predict(img, mask)
     out_fn = os.path.join(dirpath if args.output_dir is None else args.output_dir, base + '_syn.nii.gz')
     logger.info('Saving image: {}'.format(out_fn))
-    synth.to_file(out_fn)
+    synth.to_filename(out_fn)
 
 
 def main(args=None):

@@ -12,9 +12,3 @@ Patch Extraction
 
 .. automodule:: synthit.util.patches
    :members:
-
-Synthesis Quality
-~~~~~~~~~~~~~~~~~
-
-.. automodule:: synthit.util.quality
-   :members:

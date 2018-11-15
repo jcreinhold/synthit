@@ -19,6 +19,7 @@ import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
     warnings.filterwarnings('ignore', category=UserWarning)
+    import nibabel as nib
     import numpy as np
     from sklearn.externals import joblib
     from synthit import PatchSynth, SynthError
@@ -142,8 +143,10 @@ def main(args=None):
             masks = ps.image_list(args.mask_dir)
             if len(masks) != len(target):
                 raise SynthError('If masks are provided, the number of masks must be equal to the number of images.')
-            source = [[src * mask for (src, mask) in zip(source_, masks)] for source_ in source]
-            target = [tgt * mask for (tgt, mask) in zip(target, masks)]
+            source = [[nib.Nifti1Image(src.get_data() * mask.get_data(), src.affine, src.header)
+                       for (src, mask) in zip(source_, masks)] for source_ in source]
+            target = [nib.Nifti1Image(tgt.get_data() * mask.get_data(), tgt.affine, tgt.header)
+                      for (tgt, mask) in zip(target, masks)]
         else:
             masks = [None] * len(target)
         if not args.cross_validate:

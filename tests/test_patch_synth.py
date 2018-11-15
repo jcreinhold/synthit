@@ -13,7 +13,7 @@ Created on: May 01, 2018
 import os
 import unittest
 
-import ants
+import nibabel as nib
 from sklearn.linear_model import LinearRegression
 
 from synthit import PatchSynth
@@ -27,8 +27,8 @@ class TestPatchSynth(unittest.TestCase):
         self.mask_dir = os.path.join(wd, 'test_data', 'masks')
         self.img_fn = os.path.join(self.data_dir, 'test.nii.gz')
         self.mask_fn = os.path.join(self.mask_dir, 'mask.nii.gz')
-        self.img = ants.image_read(self.img_fn)
-        self.mask = ants.image_read(self.mask_fn)
+        self.img = nib.load(self.img_fn)
+        self.mask = nib.load(self.mask_fn)
         self.regr = LinearRegression()
 
     def test_patch_synth_default(self):

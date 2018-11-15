@@ -45,10 +45,3 @@ synth-predict -s test/t1/ -t pr_model.pkl -m test/masks/ -o results/ -vv
 This command will synthesize FLAIR images from all the T1-w images in the `test/t1/` directory with the model created by the
 previous command. The synthesized images will be saved in the `results/` directory with the same name as the original image
 except the filename ends with `_syn.nii.gz`.
-
-## Additional Provided Routines
-
-There a variety of other routines provided for analysis. The CLI names are:
-
-1) `synth-quality` - given truth and synthesized images, generate a plot that looks at the synthesis quality
-2) `directory-view` - create figures of views of all images in a directory

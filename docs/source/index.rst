@@ -19,7 +19,6 @@ This package was developed by `Jacob Reinhold`_ and the other students and resea
    exec
    synth
    models
-   plot
    util
 
 Indices and tables

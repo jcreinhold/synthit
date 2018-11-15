@@ -14,7 +14,7 @@ __all__ = ['PatchSynth']
 
 import logging
 
-import ants
+import nibabel as nib
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 
@@ -86,12 +86,12 @@ class PatchSynth():
             X = np.hstack((X, xyz))
         logger.info('Starting synthesis')
         y = self.regr.predict(X)
-        synthesized = source[0].numpy()
+        synthesized = source[0].get_data()
         msk = np.zeros(synthesized.shape, dtype=bool)
         msk[idxs] = True
         synthesized[msk] = y.flatten()
         synthesized[~msk] = np.min(y)-1
-        predicted = source[0].new_image_like(synthesized)
+        predicted = nib.Nifti1Image(synthesized, source[0].affine, source[0].header)
         return predicted
 
     def extract_patches_train(self, source, target, mask=None):
@@ -106,11 +106,11 @@ class PatchSynth():
         for i, (*src, tgt, msk) in enumerate(zip(zip(*source), target, mask), 1):
             src = src[0]  # extract the tuple since it is currently inside a list
             logger.info('Extracting patches ({:d}/{:d})'.format(i, len(target)))
-            src_data = [src_.numpy() for src_ in src]
-            tgt_data = tgt.numpy()
+            src_data = [src_.get_data() for src_ in src]
+            tgt_data = tgt.get_data()
             # only use the first for consistency across indices since co-registration assumed
             idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else src_data[0].mean()) \
-                if msk is None else np.where(msk.numpy() == 1)
+                if msk is None else np.where(msk.get_data() == 1)
             idxs = self.__check_idxs(src_data[0], idxs)
             if self.n_samples is not None:
                 if idxs[0].size < self.n_samples:
@@ -135,9 +135,9 @@ class PatchSynth():
 
     def extract_patches_predict(self, source, mask=None):
         """ extract patches and get indices for prediction/synthesis """
-        src_data = [src.numpy() for src in source]
+        src_data = [src.get_data() for src in source]
         idxs = np.where(src_data[0] > self.threshold if self.threshold is not None else 0) \
-            if mask is None else np.where(mask.numpy() == 1)
+            if mask is None else np.where(mask.get_data() == 1)
         idxs = self.__check_idxs(src_data[0], idxs)
         if len(source) == 1:
             patches = self.__extract_patches(src_data[0], idxs)
@@ -167,5 +167,5 @@ class PatchSynth():
     def image_list(img_dir):
         """ convenience function to get a list of images in ANTsImage format """
         img_fns = glob_nii(img_dir)
-        imgs = [ants.image_read(img_fn) for img_fn in img_fns]
+        imgs = [nib.load(img_fn) for img_fn in img_fns]
         return imgs
