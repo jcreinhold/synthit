@@ -30,7 +30,6 @@ Requirements
 - numpy
 - scikit-learn
 - scikit-image
-- xgboost
 
 Installation
 ------------

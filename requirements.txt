@@ -2,4 +2,3 @@ numpy
 scikit-learn
 scikit-image
 scipy
-xgboost
