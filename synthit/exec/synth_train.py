@@ -110,7 +110,11 @@ def main(args=None):
                                          random_state=args.random_seed, verbose=1 if args.verbosity >= 2 else 0)
             flatten = True
         elif args.regr_type == 'xg':
-            from xgboost import XGBRegressor
+            try:
+                from xgboost import XGBRegressor
+            except ImportError:
+                logger.warn('Need to install xgboost to use xg option')
+                raise
             regr = XGBRegressor(n_jobs=args.n_jobs, n_estimators=args.n_trees, random_state=args.random_seed,
                                 max_depth=3 if args.max_depth is None else args.max_depth,
                                 silent=False if args.verbosity >=2 else True)

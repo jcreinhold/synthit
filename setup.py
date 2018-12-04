@@ -40,5 +40,4 @@ args = dict(
 setup(install_requires=['numpy',
                         'scikit-learn',
                         'scikit-image',
-                        'scipy',
-                        'xgboost'], **args)
+                        'scipy'], **args)
